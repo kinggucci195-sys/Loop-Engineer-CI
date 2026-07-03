@@ -1,0 +1,41 @@
+{
+  "name": "loopci",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "services/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "dev": "npm run dev --workspace @loopci/orchestrator",
+    "lint": "eslint .",
+    "test": "jest --coverage",
+    "test:ci": "jest --ci --coverage --reporters=default --reporters=jest-junit",
+    "typecheck": "tsc -b --force",
+    "format:check": "prettier --check .",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^20.17.10",
+    "eslint": "^9.18.0",
+    "jest": "^30.0.5",
+    "jest-environment-jsdom": "^30.0.5",
+    "jest-junit": "^16.0.0",
+    "prettier": "^3.4.2",
+    "ts-jest": "^29.2.5",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.19.0"
+  },
+  "jest-junit": {
+    "outputDirectory": "coverage",
+    "outputName": "junit.xml"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "name": "@loopci/orchestrator",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "diagnose": "node dist/cli/diagnose.js",
+    "dev": "node dist/index.js",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@loopci/config": "0.1.0",
+    "@loopci/contracts": "0.1.0",
+    "@loopci/logger": "0.1.0",
+    "fastify": "^5.2.1",
+    "openai": "^6.12.0",
+    "zod": "^3.24.1"
+  }
+}

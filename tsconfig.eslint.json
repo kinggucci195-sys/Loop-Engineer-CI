@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": [
+    "apps/**/*.ts",
+    "apps/**/*.tsx",
+    "packages/**/*.ts",
+    "services/**/*.ts",
+    "jest.config.js",
+    "eslint.config.mjs"
+  ],
+  "exclude": ["node_modules", "**/dist/**", "**/.next/**", "coverage"]
+}

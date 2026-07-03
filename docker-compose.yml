@@ -1,0 +1,29 @@
+services:
+  orchestrator:
+    build:
+      context: .
+      dockerfile: services/orchestrator/Dockerfile
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      LOOPCI_AI_PROVIDER: heuristic
+    ports:
+      - "4000:4000"
+    volumes:
+      - loopci-state:/app/state
+
+  worker:
+    build:
+      context: .
+      dockerfile: services/worker/Dockerfile
+    environment:
+      NODE_ENV: production
+      WORKER_POLL_INTERVAL_MS: 5000
+      LOOPCI_AI_PROVIDER: heuristic
+    volumes:
+      - loopci-state:/app/state
+    depends_on:
+      - orchestrator
+
+volumes:
+  loopci-state:
