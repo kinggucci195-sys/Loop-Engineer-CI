@@ -1,5 +1,9 @@
-import { createFailureClassifier, createHeuristicClassifier } from "../ai/classifier";
+import {
+  createFailureClassifier,
+  createHeuristicClassifier
+} from "../ai/classifier";
 import type { CiFailureEvent } from "@loopci/contracts";
+import { loadEnv } from "@loopci/config";
 
 const baseEvent: CiFailureEvent = {
   provider: "github-actions",
@@ -11,7 +15,8 @@ const baseEvent: CiFailureEvent = {
   branch: "main",
   failedJob: "validate",
   failedStep: "npm run lint",
-  logExcerpt: "ESLint no-console violation in services/orchestrator/src/index.ts"
+  logExcerpt:
+    "ESLint no-console violation in services/orchestrator/src/index.ts"
 };
 
 describe("heuristic failure classifier", () => {
@@ -47,13 +52,7 @@ describe("heuristic failure classifier", () => {
   });
 
   it("selects the heuristic provider by default", () => {
-    const classifier = createFailureClassifier({
-      NODE_ENV: "test",
-      PORT: 4000,
-      WORKER_POLL_INTERVAL_MS: 5000,
-      LOOPCI_AI_PROVIDER: "heuristic",
-      OPENAI_MODEL: "gpt-5.5"
-    });
+    const classifier = createFailureClassifier(loadEnv({ NODE_ENV: "test" }));
 
     expect(classifier).toBeDefined();
   });

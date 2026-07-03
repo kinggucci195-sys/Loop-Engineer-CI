@@ -59,7 +59,9 @@ const FAILURE_PATTERNS: Array<{
 ];
 
 function extractLikelyFiles(logExcerpt: string): string[] {
-  const matches = logExcerpt.match(/[A-Za-z0-9_./-]+\.(ts|tsx|js|jsx|json|ya?ml)/g);
+  const matches = logExcerpt.match(
+    /[A-Za-z0-9_./-]+\.(ts|tsx|js|jsx|json|ya?ml)/g
+  );
   return Array.from(new Set(matches ?? [])).slice(0, 8);
 }
 
@@ -68,7 +70,8 @@ function classifyByHeuristic(event: CiFailureEvent): FailureClassification {
     candidate.pattern.test(`${event.failedStep}\n${event.logExcerpt}`)
   );
   const kind = pattern?.kind ?? "unknown";
-  const isHighRisk = kind === "secret-or-permission" || kind === "workflow-config";
+  const isHighRisk =
+    kind === "secret-or-permission" || kind === "workflow-config";
   const isLowRisk = kind === "format" || kind === "lint";
 
   return {
@@ -77,7 +80,10 @@ function classifyByHeuristic(event: CiFailureEvent): FailureClassification {
     confidence: pattern ? 0.72 : 0.35,
     summary: `LoopCI classified ${event.failedJob}/${event.failedStep} as ${kind}.`,
     likelyFiles: extractLikelyFiles(event.logExcerpt),
-    recommendedChecks: pattern?.checks ?? ["rerun failed command", "inspect CI logs"],
+    recommendedChecks: pattern?.checks ?? [
+      "rerun failed command",
+      "inspect CI logs"
+    ],
     requiresHuman: !isLowRisk,
     rationale:
       "Heuristic classification is based on failed step names, log signatures, and known CI failure categories."

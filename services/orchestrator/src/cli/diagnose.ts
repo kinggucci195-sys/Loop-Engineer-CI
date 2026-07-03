@@ -5,7 +5,10 @@ import { ciFailureEventSchema } from "@loopci/contracts";
 import { createFailureClassifier } from "../ai/classifier";
 import { createRepairPlan } from "../domain/repair-plan";
 
-function renderPlanMarkdown(planId: string, plan: ReturnType<typeof createRepairPlan>) {
+function renderPlanMarkdown(
+  planId: string,
+  plan: ReturnType<typeof createRepairPlan>
+) {
   return [
     `# LoopCI Repair Plan: ${planId}`,
     "",
@@ -66,6 +69,8 @@ async function main() {
 }
 
 main().catch((error: unknown) => {
-  process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+  process.stderr.write(
+    `${error instanceof Error ? error.message : String(error)}\n`
+  );
   process.exit(1);
 });

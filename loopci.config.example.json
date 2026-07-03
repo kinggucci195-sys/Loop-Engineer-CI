@@ -1,0 +1,25 @@
+{
+  "defaults": {
+    "enabled": true,
+    "allowedBranches": ["main", "develop", "release/*"],
+    "lowRiskKinds": ["format", "lint", "typecheck", "unit-test"],
+    "maxLogExcerptChars": 6000,
+    "requireHumanReviewForRisk": ["medium", "high"],
+    "requireHumanReviewForKinds": [
+      "dependency",
+      "environment",
+      "workflow-config",
+      "secret-or-permission",
+      "unknown"
+    ],
+    "autoCreateIssue": false,
+    "autoCommentOnPr": false
+  },
+  "repositories": [
+    {
+      "repository": "owner/example-repo",
+      "allowedBranches": ["main", "release/*"],
+      "maxLogExcerptChars": 4000
+    }
+  ]
+}

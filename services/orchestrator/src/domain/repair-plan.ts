@@ -19,7 +19,8 @@ export function createRepairPlan(
   const safeSlug = slugify(
     `${classification.kind}-${event.failedJob}-${event.runId}`
   );
-  const humanRequired = classification.requiresHuman || classification.risk !== "low";
+  const humanRequired =
+    classification.requiresHuman || classification.risk !== "low";
 
   return {
     id: `plan-${event.runId}-${Date.now()}`,

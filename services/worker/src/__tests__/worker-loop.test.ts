@@ -94,6 +94,9 @@ describe("runWorkerLoop", () => {
       runOnce: true
     });
 
-    expect(logger.debug).toHaveBeenCalledWith({}, "No queued repair plans found");
+    expect(logger.debug).toHaveBeenCalledWith(
+      {},
+      "No queued repair plans found"
+    );
   });
 });

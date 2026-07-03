@@ -11,7 +11,7 @@ async function main() {
   const server = buildServer({
     env,
     classifier: createFailureClassifier(env),
-    planStore: createJsonlPlanStore(resolve(process.cwd(), "../../state/plans.jsonl"))
+    planStore: createJsonlPlanStore(resolve(env.STATE_DIR, "plans.jsonl"))
   });
 
   await server.listen({ port: env.PORT, host: "0.0.0.0" });

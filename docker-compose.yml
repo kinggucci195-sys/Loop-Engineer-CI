@@ -7,6 +7,7 @@ services:
       NODE_ENV: production
       PORT: 4000
       LOOPCI_AI_PROVIDER: heuristic
+      STATE_DIR: /app/state
     ports:
       - "4000:4000"
     volumes:
@@ -20,6 +21,7 @@ services:
       NODE_ENV: production
       WORKER_POLL_INTERVAL_MS: 5000
       LOOPCI_AI_PROVIDER: heuristic
+      STATE_DIR: /app/state
     volumes:
       - loopci-state:/app/state
     depends_on:

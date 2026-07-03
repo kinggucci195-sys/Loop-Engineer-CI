@@ -14,7 +14,9 @@ const event: CiFailureEvent = {
   logExcerpt: "ESLint no-console violation"
 };
 
-function classification(kind: FailureClassification["kind"]): FailureClassification {
+function classification(
+  kind: FailureClassification["kind"]
+): FailureClassification {
   return {
     kind,
     risk: kind === "lint" ? "low" : "medium",

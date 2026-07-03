@@ -7,7 +7,11 @@ export interface Logger {
   error(context: Record<string, unknown>, message: string): void;
 }
 
-function write(level: LogLevel, context: Record<string, unknown>, message: string) {
+function write(
+  level: LogLevel,
+  context: Record<string, unknown>,
+  message: string
+) {
   const payload = {
     level,
     message,

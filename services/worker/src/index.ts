@@ -8,8 +8,8 @@ import { runWorkerLoop } from "./worker-loop";
 async function main() {
   const env = loadEnv();
   const logger = createLogger();
-  const planPath = resolve(process.cwd(), "../../state/plans.jsonl");
-  const evidencePath = resolve(process.cwd(), "../../state/evidence");
+  const planPath = resolve(process.cwd(), env.STATE_DIR, "plans.jsonl");
+  const evidencePath = resolve(process.cwd(), env.STATE_DIR, "evidence");
 
   logger.info(
     {

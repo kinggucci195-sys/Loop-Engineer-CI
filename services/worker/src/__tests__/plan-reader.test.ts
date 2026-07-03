@@ -50,7 +50,11 @@ describe("createWorkerPlanStore", () => {
   it("returns null when no queued plan is available", async () => {
     const dir = await mkdtemp(join(tmpdir(), "loopci-"));
     const filePath = join(dir, "plans.jsonl");
-    await writeFile(filePath, `${JSON.stringify(createPlan("blocked"))}\n`, "utf8");
+    await writeFile(
+      filePath,
+      `${JSON.stringify(createPlan("blocked"))}\n`,
+      "utf8"
+    );
     const store = createWorkerPlanStore(filePath);
 
     await expect(store.claimNext()).resolves.toBeNull();
@@ -59,7 +63,11 @@ describe("createWorkerPlanStore", () => {
   it("throws when updating a missing plan", async () => {
     const dir = await mkdtemp(join(tmpdir(), "loopci-"));
     const filePath = join(dir, "plans.jsonl");
-    await writeFile(filePath, `${JSON.stringify(createPlan("blocked"))}\n`, "utf8");
+    await writeFile(
+      filePath,
+      `${JSON.stringify(createPlan("blocked"))}\n`,
+      "utf8"
+    );
     const store = createWorkerPlanStore(filePath);
 
     await expect(store.update(createPlan("queued"))).rejects.toThrow(

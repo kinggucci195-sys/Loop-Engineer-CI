@@ -2,6 +2,18 @@
 
 LoopCI is an AI-driven CI/CD repair loop. It watches failed pipelines, classifies the failure, filters flaky or noisy failures, prepares a low-risk repair plan, validates evidence, and stops at human review before merge or deploy.
 
+## What It Does
+
+LoopCI gives teams an installable assistant for CI failures:
+
+- Receives signed GitHub `workflow_run` webhooks.
+- Applies repository and branch policy before accepting work.
+- Classifies failures into lint, typecheck, test, dependency, environment, workflow, secret, flaky, and unknown categories.
+- Creates a repair plan with recommended checks, required evidence, residual risk, and a safe review status.
+- Lets a worker claim queued low-risk plans and attach evidence bundles.
+
+It is designed for “advice plus evidence,” not blind auto-merge. The human keeps merge and deployment authority.
+
 ## Stack
 
 - npm workspaces
@@ -47,6 +59,28 @@ Or with Docker:
 docker compose up --build
 ```
 
+## Production Install
+
+```bash
+cp .env.example .env
+cp loopci.config.example.json loopci.config.json
+docker compose -f deploy/docker-compose.production.yml up --build -d
+```
+
+Then add a GitHub webhook for `Workflow runs` pointing to:
+
+```text
+https://your-loopci-domain.example/webhooks/github
+```
+
+Use the same secret in GitHub and `GITHUB_WEBHOOK_SECRET`.
+
+See:
+
+- [GitHub install guide](docs/install-github.md)
+- [Production runbook](docs/production.md)
+- [Security model](docs/security.md)
+
 ## Example CI Failure Event
 
 ```bash
@@ -68,6 +102,8 @@ curl -X POST http://localhost:4000/events/github-actions/failure \
 
 ## Safety Model
 
+- GitHub webhooks must be signed with `X-Hub-Signature-256`.
+- Repository policy controls accepted repos, branches, risk levels, and failure kinds.
 - No auto-merge in the MVP.
 - No production deploy authority.
 - AI output is treated as advice until deterministic checks pass.

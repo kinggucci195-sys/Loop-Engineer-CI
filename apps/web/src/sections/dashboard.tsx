@@ -14,22 +14,26 @@ const STAGES = [
   {
     id: "classify",
     title: "Classify",
-    description: "The triage agent separates lint, type, test, dependency, flaky, and workflow failures."
+    description:
+      "The triage agent separates lint, type, test, dependency, flaky, and workflow failures."
   },
   {
     id: "plan",
     title: "Plan",
-    description: "Low-risk failures become isolated repair plans with explicit stop conditions."
+    description:
+      "Low-risk failures become isolated repair plans with explicit stop conditions."
   },
   {
     id: "evaluate",
     title: "Evaluate",
-    description: "Deterministic checks and a separate evaluator decide whether evidence is strong enough."
+    description:
+      "Deterministic checks and a separate evaluator decide whether evidence is strong enough."
   },
   {
     id: "review",
     title: "Review",
-    description: "Humans keep merge and deploy authority until the loop earns more trust."
+    description:
+      "Humans keep merge and deploy authority until the loop earns more trust."
   }
 ] as const;
 
@@ -69,8 +73,12 @@ export function MetricGrid() {
           key={metric.id}
           className="rounded-[8px] border border-[var(--panel-border)] bg-[var(--background)] p-4"
         >
-          <dt className="text-sm text-[var(--muted-foreground)]">{metric.label}</dt>
-          <dd className={`mt-2 text-2xl font-semibold ${toneClass(metric.tone)}`}>
+          <dt className="text-sm text-[var(--muted-foreground)]">
+            {metric.label}
+          </dt>
+          <dd
+            className={`mt-2 text-2xl font-semibold ${toneClass(metric.tone)}`}
+          >
             {metric.value}
           </dd>
         </div>
