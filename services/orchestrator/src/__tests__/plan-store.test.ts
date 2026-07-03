@@ -48,4 +48,22 @@ describe("createJsonlPlanStore", () => {
     expect(plans).toHaveLength(1);
     expect(plans[0]?.classification.kind).toBe("typecheck");
   });
+
+  it("claims the next queued repair plan", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "loopci-"));
+    const store = createJsonlPlanStore(join(dir, "plans.jsonl"));
+    const plan = createRepairPlan(event, {
+      ...classification,
+      kind: "lint",
+      risk: "low",
+      requiresHuman: false
+    });
+
+    await store.append(plan);
+    const claimed = await store.claimNext();
+    const plans = await store.list();
+
+    expect(claimed?.status).toBe("claimed");
+    expect(plans[0]?.status).toBe("claimed");
+  });
 });

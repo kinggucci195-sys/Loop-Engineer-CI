@@ -1,41 +1,29 @@
-import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { repairPlanSchema } from "@loopci/contracts";
 import { loadEnv } from "@loopci/config";
 import { createLogger } from "@loopci/logger";
-import { buildEvidenceBundle } from "./evidence/evidence-bundle";
-
-async function readPlans(filePath: string) {
-  try {
-    const contents = await readFile(filePath, "utf8");
-    return contents
-      .split("\n")
-      .filter(Boolean)
-      .map((line) => repairPlanSchema.parse(JSON.parse(line)));
-  } catch (error) {
-    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
-      return [];
-    }
-
-    throw error;
-  }
-}
+import { createWorkerPlanStore } from "./plan-reader";
+import { createJsonEvidenceStore } from "./state/evidence-store";
+import { runWorkerLoop } from "./worker-loop";
 
 async function main() {
   const env = loadEnv();
   const logger = createLogger();
   const planPath = resolve(process.cwd(), "../../state/plans.jsonl");
-  const plans = await readPlans(planPath);
-  const bundles = plans.map(buildEvidenceBundle);
+  const evidencePath = resolve(process.cwd(), "../../state/evidence");
 
   logger.info(
     {
-      pollIntervalMs: env.WORKER_POLL_INTERVAL_MS,
-      plans: plans.length,
-      bundles: bundles.length
+      pollIntervalMs: env.WORKER_POLL_INTERVAL_MS
     },
-    "LoopCI worker inspected repair plans"
+    "LoopCI worker started"
   );
+
+  await runWorkerLoop({
+    planStore: createWorkerPlanStore(planPath),
+    evidenceStore: createJsonEvidenceStore(evidencePath),
+    logger,
+    pollIntervalMs: env.WORKER_POLL_INTERVAL_MS
+  });
 }
 
 main().catch((error: unknown) => {

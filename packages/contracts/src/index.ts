@@ -53,7 +53,18 @@ export const repairPlanSchema = z.object({
   id: z.string().min(1),
   event: ciFailureEventSchema,
   classification: classificationSchema,
-  status: z.enum(["queued", "planning", "blocked", "ready-for-review"]),
+  status: z.enum([
+    "classified",
+    "queued",
+    "claimed",
+    "planning",
+    "evaluating",
+    "evidence-attached",
+    "blocked",
+    "ready-for-review",
+    "rejected",
+    "closed"
+  ]),
   branchName: z.string().min(1),
   goal: z.string().min(1),
   steps: z.array(z.string()).min(1),
@@ -68,3 +79,16 @@ export type RiskLevel = z.infer<typeof riskLevelSchema>;
 export type CiFailureEvent = z.infer<typeof ciFailureEventSchema>;
 export type FailureClassification = z.infer<typeof classificationSchema>;
 export type RepairPlan = z.infer<typeof repairPlanSchema>;
+
+export const evidenceBundleSchema = z.object({
+  planId: z.string().min(1),
+  repository: z.string().min(1),
+  branchName: z.string().min(1),
+  summary: z.string().min(1),
+  commandsToRun: z.array(z.string()).default([]),
+  requiredHumanChecks: z.array(z.string()).min(1),
+  riskNotes: z.array(z.string()).min(1),
+  createdAt: z.string().datetime()
+});
+
+export type EvidenceBundle = z.infer<typeof evidenceBundleSchema>;

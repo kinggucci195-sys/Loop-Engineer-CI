@@ -1,6 +1,7 @@
 import {
   ciFailureEventSchema,
   classificationSchema,
+  evidenceBundleSchema,
   repairPlanSchema
 } from "../index";
 
@@ -75,5 +76,20 @@ describe("LoopCI contracts", () => {
     });
 
     expect(plan.evidenceRequired).toContain("npm test output");
+  });
+
+  it("validates an evidence bundle", () => {
+    const bundle = evidenceBundleSchema.parse({
+      planId: "plan-1",
+      repository: "kinggucci195-sys/loopci",
+      branchName: "loopci/fix-lint",
+      summary: "Lint repair evidence.",
+      commandsToRun: ["npm run lint"],
+      requiredHumanChecks: ["Review diff."],
+      riskNotes: ["Low risk."],
+      createdAt: new Date().toISOString()
+    });
+
+    expect(bundle.commandsToRun).toContain("npm run lint");
   });
 });

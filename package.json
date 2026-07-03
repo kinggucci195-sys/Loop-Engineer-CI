@@ -12,12 +12,15 @@
     "npm": ">=10.0.0"
   },
   "scripts": {
-    "build": "npm run build --workspaces",
+    "build": "npm run build:packages && npm run build:services && npm run build:web",
+    "build:packages": "npm run build --workspace @loopci/contracts && npm run build --workspace @loopci/config && npm run build --workspace @loopci/logger",
+    "build:services": "npm run build --workspace @loopci/orchestrator && npm run build --workspace @loopci/worker",
+    "build:web": "npm run build --workspace @loopci/web",
     "dev": "npm run dev --workspace @loopci/orchestrator",
     "lint": "eslint .",
     "test": "jest --coverage",
     "test:ci": "jest --ci --coverage --reporters=default --reporters=jest-junit",
-    "typecheck": "tsc -b --force",
+    "typecheck": "tsc -b --force && npm run typecheck --workspace @loopci/web",
     "format:check": "prettier --check .",
     "format": "prettier --write ."
   },

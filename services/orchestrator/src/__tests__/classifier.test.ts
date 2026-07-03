@@ -1,4 +1,4 @@
-import { createHeuristicClassifier } from "../ai/classifier";
+import { createFailureClassifier, createHeuristicClassifier } from "../ai/classifier";
 import type { CiFailureEvent } from "@loopci/contracts";
 
 const baseEvent: CiFailureEvent = {
@@ -31,5 +31,30 @@ describe("heuristic failure classifier", () => {
     expect(classification.likelyFiles).toContain(
       "services/orchestrator/src/index.ts"
     );
+  });
+
+  it("classifies unknown failures conservatively", async () => {
+    const classifier = createHeuristicClassifier();
+    const classification = await classifier.classify({
+      ...baseEvent,
+      failedStep: "custom command",
+      logExcerpt: "The build did something surprising."
+    });
+
+    expect(classification.kind).toBe("unknown");
+    expect(classification.risk).toBe("medium");
+    expect(classification.requiresHuman).toBe(true);
+  });
+
+  it("selects the heuristic provider by default", () => {
+    const classifier = createFailureClassifier({
+      NODE_ENV: "test",
+      PORT: 4000,
+      WORKER_POLL_INTERVAL_MS: 5000,
+      LOOPCI_AI_PROVIDER: "heuristic",
+      OPENAI_MODEL: "gpt-5.5"
+    });
+
+    expect(classifier).toBeDefined();
   });
 });

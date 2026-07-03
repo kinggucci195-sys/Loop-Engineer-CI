@@ -1,14 +1,4 @@
-import type { RepairPlan } from "@loopci/contracts";
-
-export interface EvidenceBundle {
-  planId: string;
-  repository: string;
-  branchName: string;
-  summary: string;
-  commandsToRun: string[];
-  requiredHumanChecks: string[];
-  riskNotes: string[];
-}
+import type { EvidenceBundle, RepairPlan } from "@loopci/contracts";
 
 export function buildEvidenceBundle(plan: RepairPlan): EvidenceBundle {
   const commandsToRun = Array.from(
@@ -35,6 +25,7 @@ export function buildEvidenceBundle(plan: RepairPlan): EvidenceBundle {
       plan.residualRisk,
       `Risk level: ${plan.classification.risk}`,
       `Classifier confidence: ${plan.classification.confidence}`
-    ]
+    ],
+    createdAt: new Date().toISOString()
   };
 }

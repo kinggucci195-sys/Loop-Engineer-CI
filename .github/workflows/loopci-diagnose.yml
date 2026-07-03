@@ -11,6 +11,10 @@ on:
       run_id:
         description: "Failed GitHub Actions run id to diagnose"
         required: false
+      include_log_excerpt:
+        description: "Upload redacted failed log excerpt"
+        required: false
+        default: "false"
 
 permissions:
   actions: read
@@ -25,6 +29,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -48,29 +54,50 @@ jobs:
           RUN_ID: ${{ inputs.run_id || github.event.workflow_run.id }}
         run: |
           mkdir -p state
-          gh run view "$RUN_ID" --log-failed > state/failed-log.txt || true
-          head -c 11000 state/failed-log.txt > state/failed-log-excerpt.txt
+          gh run view "$RUN_ID" --json workflowName,conclusion,databaseId,headBranch,headSha,url > state/run.json
+          node - <<'NODE'
+          const { readFileSync } = require("node:fs");
+          const run = JSON.parse(readFileSync("state/run.json", "utf8"));
+          if (run.workflowName !== "CI" || run.conclusion !== "failure") {
+            throw new Error(`Refusing to diagnose run ${run.databaseId}: expected failed CI workflow.`);
+          }
+          NODE
+          gh run view "$RUN_ID" --json jobs > state/jobs.json
+          gh run view "$RUN_ID" --log-failed > state/failed-log.txt
+          node - <<'NODE'
+          const { readFileSync, writeFileSync } = require("node:fs");
+          const raw = readFileSync("state/failed-log.txt", "utf8").slice(0, 11000);
+          const redacted = raw
+            .replace(/(ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]+/g, "[REDACTED_GITHUB_TOKEN]")
+            .replace(/sk-[A-Za-z0-9_-]{20,}/g, "[REDACTED_OPENAI_KEY]")
+            .replace(/AKIA[0-9A-Z]{16}/g, "[REDACTED_AWS_ACCESS_KEY]")
+            .replace(/(?<=password=)[^\\s&]+/gi, "[REDACTED]")
+            .replace(/(?<=token=)[^\\s&]+/gi, "[REDACTED]")
+            .replace(/(?<=secret=)[^\\s&]+/gi, "[REDACTED]");
+          writeFileSync("state/failed-log-excerpt.txt", redacted);
+          NODE
 
       - name: Build failure event
         env:
           RUN_ID: ${{ inputs.run_id || github.event.workflow_run.id }}
-          RUN_URL: ${{ github.event.workflow_run.html_url || format('https://github.com/{0}/actions/runs/{1}', github.repository, inputs.run_id) }}
-          HEAD_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
-          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch || github.ref_name }}
         run: |
           node - <<'NODE'
           const { readFileSync, writeFileSync } = require("node:fs");
+          const run = JSON.parse(readFileSync("state/run.json", "utf8"));
+          const jobs = JSON.parse(readFileSync("state/jobs.json", "utf8")).jobs || [];
+          const failedJob = jobs.find((job) => job.conclusion === "failure") || jobs[0] || {};
+          const failedStep = (failedJob.steps || []).find((step) => step.conclusion === "failure") || {};
           const excerpt = readFileSync("state/failed-log-excerpt.txt", "utf8") || "No failed log excerpt captured.";
           const payload = {
             provider: "github-actions",
             repository: process.env.GITHUB_REPOSITORY,
-            workflow: "CI",
+            workflow: run.workflowName,
             runId: process.env.RUN_ID,
-            runUrl: process.env.RUN_URL,
-            commitSha: process.env.HEAD_SHA,
-            branch: process.env.HEAD_BRANCH,
-            failedJob: "unknown",
-            failedStep: "failed GitHub Actions step",
+            runUrl: run.url,
+            commitSha: run.headSha,
+            branch: run.headBranch,
+            failedJob: failedJob.name || "unknown",
+            failedStep: failedStep.name || "failed GitHub Actions step",
             logExcerpt: excerpt
           };
           writeFileSync("state/failure-event.json", JSON.stringify(payload, null, 2));
@@ -87,5 +114,11 @@ jobs:
           name: loopci-repair-plan
           path: |
             state/failure-event.json
-            state/failed-log-excerpt.txt
             state/loopci-repair-plan.md
+
+      - name: Upload redacted log excerpt
+        if: ${{ inputs.include_log_excerpt == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: loopci-redacted-log-excerpt
+          path: state/failed-log-excerpt.txt

@@ -1,0 +1,17 @@
+.git
+.github
+.env
+.env.*
+node_modules
+**/node_modules
+coverage
+**/coverage
+dist
+**/dist
+.next
+**/.next
+state
+**/*.log
+npm-debug.log*
+*.tsbuildinfo
+README.md

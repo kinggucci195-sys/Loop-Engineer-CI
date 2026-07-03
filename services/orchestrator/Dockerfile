@@ -22,6 +22,8 @@ ENV NODE_ENV=production
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=build /app/packages ./packages
 COPY --from=build /app/services/orchestrator ./services/orchestrator
+RUN addgroup -S loopci && adduser -S loopci -G loopci && chown -R loopci:loopci /app
+USER loopci
 WORKDIR /app/services/orchestrator
 EXPOSE 4000
 CMD ["node", "dist/index.js"]
