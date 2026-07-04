@@ -337,7 +337,13 @@ function RepairQueue() {
               </div>
 
               <a
-                href={`/actions/plans/${plan.id}/request-fix`}
+                href={
+                  plan.risk === "low"
+                    ? `/actions/request-fix?planId=${encodeURIComponent(
+                        plan.id
+                      )}&risk=${plan.risk}`
+                    : "#policy"
+                }
                 className={`inline-flex h-11 items-center justify-center gap-2 rounded-[8px] px-4 text-sm font-semibold transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-[var(--accent)] ${
                   plan.risk === "low"
                     ? "bg-[var(--accent)] text-[oklch(0.12_0.01_105)] hover:bg-[var(--accent-strong)]"
@@ -451,7 +457,7 @@ function PolicyPanel() {
       </div>
 
       <div className="mt-5 overflow-hidden rounded-[8px] border border-[var(--panel-border)]">
-        <div className="grid grid-cols-[0.85fr_1fr_1.25fr] border-b border-[var(--panel-border)] bg-[var(--panel-raised)] px-4 py-3 text-sm font-semibold">
+        <div className="hidden grid-cols-[0.85fr_1fr_1.25fr] border-b border-[var(--panel-border)] bg-[var(--panel-raised)] px-4 py-3 text-sm font-semibold md:grid">
           <span>Control</span>
           <span>Setting</span>
           <span>Result</span>
@@ -459,11 +465,21 @@ function PolicyPanel() {
         {policyRows.map(([control, setting, result]) => (
           <div
             key={control}
-            className="grid grid-cols-[0.85fr_1fr_1.25fr] gap-3 border-b border-[var(--panel-border)] px-4 py-4 text-sm last:border-b-0"
+            className="grid gap-2 border-b border-[var(--panel-border)] px-4 py-4 text-sm last:border-b-0 md:grid-cols-[0.85fr_1fr_1.25fr] md:gap-3"
           >
             <span className="font-semibold">{control}</span>
-            <span className="text-[var(--muted-foreground)]">{setting}</span>
-            <span className="text-[var(--muted-foreground)]">{result}</span>
+            <span className="text-[var(--muted-foreground)]">
+              <span className="font-semibold text-[var(--foreground)] md:hidden">
+                Setting:{" "}
+              </span>
+              {setting}
+            </span>
+            <span className="text-[var(--muted-foreground)]">
+              <span className="font-semibold text-[var(--foreground)] md:hidden">
+                Result:{" "}
+              </span>
+              {result}
+            </span>
           </div>
         ))}
       </div>

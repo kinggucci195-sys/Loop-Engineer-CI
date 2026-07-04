@@ -7,13 +7,24 @@ import {
 } from "react-icons/io5";
 
 interface RequestFixPageProps {
-  params: Promise<{
-    planId: string;
+  searchParams: Promise<{
+    planId?: string;
+    risk?: string;
   }>;
 }
 
-export default async function RequestFixPage({ params }: RequestFixPageProps) {
-  const { planId } = await params;
+export default async function RequestFixPage({
+  searchParams
+}: RequestFixPageProps) {
+  const { planId = "selected-plan", risk = "low" } = await searchParams;
+  const orchestratorUrl = process.env.NEXT_PUBLIC_LOOPCI_ORCHESTRATOR_URL;
+  const actionUrl = orchestratorUrl
+    ? `${orchestratorUrl.replace(
+        /\/$/,
+        ""
+      )}/actions/plans/${encodeURIComponent(planId)}/request-fix`
+    : undefined;
+  const canRequest = risk === "low" && Boolean(actionUrl);
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-[var(--background)] px-5 py-10 text-[var(--foreground)]">
@@ -38,7 +49,8 @@ export default async function RequestFixPage({ params }: RequestFixPageProps) {
           <span className="font-semibold text-[var(--foreground)]">
             {planId}
           </span>{" "}
-          is ready for a safe repair request.
+          can only request a draft repair PR after policy and orchestrator
+          checks pass.
         </p>
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2">
@@ -65,12 +77,22 @@ export default async function RequestFixPage({ params }: RequestFixPageProps) {
         </div>
 
         <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-          <button
-            type="button"
-            className="inline-flex h-11 items-center justify-center rounded-[8px] bg-[var(--accent)] px-4 text-sm font-semibold text-[oklch(0.12_0.01_105)] transition-colors duration-200 hover:bg-[var(--accent-strong)] focus-visible:outline-2 focus-visible:outline-[var(--accent-strong)]"
-          >
-            Request draft repair PR
-          </button>
+          {canRequest && actionUrl ? (
+            <a
+              href={actionUrl}
+              className="inline-flex h-11 items-center justify-center rounded-[8px] bg-[var(--accent)] px-4 text-sm font-semibold text-[oklch(0.12_0.01_105)] transition-colors duration-200 hover:bg-[var(--accent-strong)] focus-visible:outline-2 focus-visible:outline-[var(--accent-strong)]"
+            >
+              Request draft repair PR
+            </a>
+          ) : (
+            <button
+              type="button"
+              disabled
+              className="inline-flex h-11 cursor-not-allowed items-center justify-center rounded-[8px] border border-[var(--panel-border)] px-4 text-sm font-semibold text-[var(--muted-foreground)]"
+            >
+              Connect orchestrator URL
+            </button>
+          )}
           <Link
             href="/"
             className="inline-flex h-11 items-center justify-center rounded-[8px] border border-[var(--panel-border)] px-4 text-sm font-semibold transition-colors duration-200 hover:bg-[var(--panel-raised)] focus-visible:outline-2 focus-visible:outline-[var(--accent)]"
