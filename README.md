@@ -11,6 +11,7 @@ LoopCI gives teams an installable assistant for CI failures:
 - Classifies failures into lint, typecheck, test, dependency, environment, workflow, secret, flaky, and unknown categories.
 - Creates a repair plan with recommended checks, required evidence, residual risk, and a safe review status.
 - Lets a worker claim queued low-risk plans and attach evidence bundles.
+- Sends Teams and email repair-plan alerts routed by the GitHub actor who triggered the failed run.
 
 It is designed for “advice plus evidence,” not blind auto-merge. The human keeps merge and deployment authority.
 
@@ -64,6 +65,7 @@ docker compose up --build
 ```bash
 cp .env.example .env
 cp loopci.config.example.json loopci.config.json
+cp loopci.notifications.example.json loopci.notifications.json
 docker compose -f deploy/docker-compose.production.yml up --build -d
 ```
 

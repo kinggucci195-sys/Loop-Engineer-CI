@@ -14,6 +14,10 @@ import {
   isBranchAllowed,
   type RepositoryPolicyProvider
 } from "./policy/repository-policy";
+import {
+  createNotificationDispatcher,
+  type NotificationDispatcher
+} from "./notifications/dispatcher";
 import { verifyGitHubWebhookSignature } from "./security/github-signature";
 import type { PlanStore } from "./state/plan-store";
 import { createCiFailureEventFromGitHubWebhook } from "./webhooks/github";
@@ -23,6 +27,7 @@ export interface ServerDependencies {
   classifier: FailureClassifier;
   planStore: PlanStore;
   policyProvider?: RepositoryPolicyProvider;
+  notificationDispatcher?: NotificationDispatcher;
 }
 
 export function buildServer(dependencies: ServerDependencies) {
@@ -31,6 +36,9 @@ export function buildServer(dependencies: ServerDependencies) {
   const policyProvider =
     dependencies.policyProvider ??
     createFileRepositoryPolicyProvider(dependencies.env.LOOPCI_POLICY_PATH);
+  const notificationDispatcher =
+    dependencies.notificationDispatcher ??
+    createNotificationDispatcher(dependencies.env, logger);
 
   server.register(fastifyRawBody, {
     field: "rawBody",
@@ -72,6 +80,93 @@ export function buildServer(dependencies: ServerDependencies) {
     server.get("/plans", async () => ({
       plans: await dependencies.planStore.list()
     }));
+
+    server.get("/plans/:planId", async (request, reply) => {
+      const { planId } = request.params as { planId: string };
+      const plan = await findPlan(planId);
+
+      if (!plan) {
+        return reply.code(404).send({
+          found: false,
+          reason: "plan-not-found",
+          planId
+        });
+      }
+
+      return {
+        found: true,
+        plan
+      };
+    });
+
+    server.get("/actions/plans/:planId/request-fix", async (request, reply) => {
+      const { planId } = request.params as { planId: string };
+      const plan = await findPlan(planId);
+
+      if (!plan) {
+        return reply
+          .code(404)
+          .type("text/html")
+          .send(
+            renderActionPage({
+              title: "Plan not found",
+              body: `LoopCI could not find repair plan ${escapeHtml(planId)}.`
+            })
+          );
+      }
+
+      return reply.type("text/html").send(
+        renderActionPage({
+          title: "Request LoopCI Fix",
+          body: [
+            `<p><strong>${escapeHtml(plan.event.repository)}</strong></p>`,
+            `<p>${escapeHtml(plan.classification.summary)}</p>`,
+            `<form method="post" action="/actions/plans/${encodeURIComponent(
+              plan.id
+            )}/request-fix">`,
+            `<button type="submit">Request draft repair PR</button>`,
+            `</form>`
+          ].join("")
+        })
+      );
+    });
+
+    server.post(
+      "/actions/plans/:planId/request-fix",
+      async (request, reply) => {
+        const { planId } = request.params as { planId: string };
+        const plan = await findPlan(planId);
+
+        if (!plan) {
+          return reply.code(404).send({
+            accepted: false,
+            reason: "plan-not-found",
+            planId
+          });
+        }
+
+        if (plan.classification.risk !== "low") {
+          return reply.code(409).send({
+            accepted: false,
+            reason: "human-review-required",
+            planId,
+            risk: plan.classification.risk
+          });
+        }
+
+        const requestedPlan = {
+          ...plan,
+          status: "queued" as const
+        };
+        await dependencies.planStore.update(requestedPlan);
+
+        return reply.code(202).send({
+          accepted: true,
+          plan: requestedPlan,
+          next: "queued-for-worker-evidence"
+        });
+      }
+    );
 
     server.post("/events/github-actions/failure", async (request, reply) => {
       const event = ciFailureEventSchema.parse({
@@ -156,6 +251,7 @@ export function buildServer(dependencies: ServerDependencies) {
     const plan = createRepairPlan(policyEvent, classification);
 
     await dependencies.planStore.append(plan);
+    await notificationDispatcher.notifyRepairPlan(plan);
 
     logger.info(
       {
@@ -178,5 +274,35 @@ export function buildServer(dependencies: ServerDependencies) {
     });
   }
 
+  async function findPlan(planId: string) {
+    const plans = await dependencies.planStore.list();
+    return plans.find((plan) => plan.id === planId);
+  }
+
   return server;
+}
+
+function renderActionPage(input: { title: string; body: string }) {
+  return [
+    "<!doctype html>",
+    '<html lang="en">',
+    "<head>",
+    '<meta charset="utf-8" />',
+    '<meta name="viewport" content="width=device-width, initial-scale=1" />',
+    `<title>${escapeHtml(input.title)}</title>`,
+    "</head>",
+    "<body>",
+    `<main>${input.body}</main>`,
+    "</body>",
+    "</html>"
+  ].join("");
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }

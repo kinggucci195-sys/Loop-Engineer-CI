@@ -14,6 +14,8 @@ Both services share `STATE_DIR`, currently a mounted JSONL-backed state volume. 
 - `GITHUB_WEBHOOK_SECRET`: verifies GitHub webhook delivery signatures.
 - `OPENAI_API_KEY`: required only when `LOOPCI_AI_PROVIDER=openai`.
 - `GITHUB_TOKEN`: reserved for future authenticated GitHub API actions.
+- `LOOPCI_TEAMS_WEBHOOK_URL`: optional Teams channel webhook for repair-plan alerts.
+- `LOOPCI_SMTP_PASSWORD`: optional SMTP or Gmail app password for email alerts.
 
 Never commit `.env`, raw CI logs, private keys, tokens, or generated evidence that contains secrets.
 
@@ -23,9 +25,23 @@ Expose only the orchestrator through HTTPS. Keep the worker private. Recommended
 
 - `GET /health`: liveness.
 - `GET /ready`: readiness, including state-store access.
+- `GET /plans/:planId`: repair-plan detail for alert links.
+- `GET /actions/plans/:planId/request-fix`: safe confirmation page for alert buttons.
 - `POST /webhooks/github`: signed webhook ingestion.
+- `POST /actions/plans/:planId/request-fix`: queues a low-risk plan for worker evidence.
 
 Use a reverse proxy, managed load balancer, or platform router that enforces TLS and request size limits.
+
+## Notifications
+
+LoopCI can notify a Teams channel and email recipients when a repair plan is created.
+
+- Use `LOOPCI_NOTIFICATION_USERS_PATH` to point at `loopci.notifications.json`.
+- Map GitHub logins to email addresses in that file.
+- Use `LOOPCI_TEAMS_WEBHOOK_URL` for a default Teams channel, or `defaultTeamsWebhookUrl` in the notification file.
+- Use Gmail SMTP, Google Workspace SMTP relay, or another SMTP provider for email delivery.
+
+The Teams and email buttons open a confirmation URL. They do not merge code or deploy production changes directly.
 
 ## Safe Operating Mode
 

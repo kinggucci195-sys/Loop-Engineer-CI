@@ -13,7 +13,10 @@ describe("orchestrator server", () => {
     const server = buildServer({
       env: loadEnv({ NODE_ENV: "test" }),
       classifier: createHeuristicClassifier(),
-      planStore: createJsonlPlanStore(join(dir, "plans.jsonl"))
+      planStore: createJsonlPlanStore(join(dir, "plans.jsonl")),
+      notificationDispatcher: {
+        notifyRepairPlan: jest.fn()
+      }
     });
 
     const response = await server.inject({
@@ -61,13 +64,20 @@ describe("orchestrator server", () => {
   it("accepts signed GitHub workflow_run failure webhooks", async () => {
     const dir = await mkdtemp(join(tmpdir(), "loopci-"));
     const secret = "test-secret";
+    const notifyRepairPlan = jest.fn();
     const server = buildServer({
       env: loadEnv({ NODE_ENV: "test", GITHUB_WEBHOOK_SECRET: secret }),
       classifier: createHeuristicClassifier(),
-      planStore: createJsonlPlanStore(join(dir, "plans.jsonl"))
+      planStore: createJsonlPlanStore(join(dir, "plans.jsonl")),
+      notificationDispatcher: {
+        notifyRepairPlan
+      }
     });
     const payload = JSON.stringify({
       action: "completed",
+      sender: {
+        login: "kinggucci195-sys"
+      },
       repository: {
         full_name: "kinggucci195-sys/loopci"
       },
@@ -78,6 +88,18 @@ describe("orchestrator server", () => {
           "https://github.com/kinggucci195-sys/loopci/actions/runs/2002",
         head_sha: "abcdef2",
         head_branch: "main",
+        head_commit: {
+          author: {
+            name: "King Gucci",
+            email: "dev@example.com"
+          }
+        },
+        actor: {
+          login: "kinggucci195-sys"
+        },
+        triggering_actor: {
+          login: "kinggucci195-sys"
+        },
         conclusion: "failure",
         status: "completed",
         event: "push"
@@ -101,9 +123,55 @@ describe("orchestrator server", () => {
       plan: {
         event: {
           repository: "kinggucci195-sys/loopci",
-          runId: "2002"
+          runId: "2002",
+          actor: "kinggucci195-sys",
+          triggeringActor: "kinggucci195-sys",
+          commitAuthorEmail: "dev@example.com"
         }
       }
+    });
+    expect(notifyRepairPlan).toHaveBeenCalledTimes(1);
+  });
+
+  it("queues a low-risk fix request from an action endpoint", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "loopci-"));
+    const server = buildServer({
+      env: loadEnv({ NODE_ENV: "test" }),
+      classifier: createHeuristicClassifier(),
+      planStore: createJsonlPlanStore(join(dir, "plans.jsonl")),
+      notificationDispatcher: {
+        notifyRepairPlan: jest.fn()
+      }
+    });
+
+    const createResponse = await server.inject({
+      method: "POST",
+      url: "/events/github-actions/failure",
+      payload: {
+        provider: "github-actions",
+        repository: "kinggucci195-sys/loopci",
+        workflow: "ci",
+        runId: "3003",
+        runUrl: "https://github.com/kinggucci195-sys/loopci/actions/runs/3003",
+        commitSha: "abcdef3",
+        branch: "main",
+        actor: "kinggucci195-sys",
+        failedJob: "validate",
+        failedStep: "npm run lint",
+        logExcerpt: "ESLint no-console violation in src/index.ts"
+      }
+    });
+    const planId = createResponse.json().plan.id;
+
+    const actionResponse = await server.inject({
+      method: "POST",
+      url: `/actions/plans/${encodeURIComponent(planId)}/request-fix`
+    });
+
+    expect(actionResponse.statusCode).toBe(202);
+    expect(actionResponse.json()).toMatchObject({
+      accepted: true,
+      next: "queued-for-worker-evidence"
     });
   });
 

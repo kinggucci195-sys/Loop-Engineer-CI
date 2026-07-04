@@ -9,6 +9,7 @@ const baseConfig = {
     "services/**/*.ts",
     "!**/dist/**",
     "!**/*.d.ts",
+    "!**/__tests__/**",
     "!**/src/index.ts",
     "!**/src/cli/**"
   ],

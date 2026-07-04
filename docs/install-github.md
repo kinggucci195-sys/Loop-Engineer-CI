@@ -9,6 +9,7 @@ Run the orchestrator behind HTTPS. GitHub webhooks must call a public URL.
 ```bash
 cp .env.example .env
 cp loopci.config.example.json loopci.config.json
+cp loopci.notifications.example.json loopci.notifications.json
 docker compose -f deploy/docker-compose.production.yml up --build -d
 ```
 
@@ -18,6 +19,7 @@ Set these values in `.env`:
 LOOPCI_AI_PROVIDER=heuristic
 GITHUB_WEBHOOK_SECRET=<long-random-secret>
 LOOPCI_PUBLIC_URL=https://your-loopci-domain.example
+LOOPCI_NOTIFICATION_USERS_PATH=./loopci.notifications.json
 ```
 
 Use `LOOPCI_AI_PROVIDER=openai` only after adding `OPENAI_API_KEY`.
@@ -41,7 +43,38 @@ Edit `loopci.config.json` and add every repository that can send events:
 
 LoopCI ignores repositories disabled by policy and ignores branches outside `allowedBranches`.
 
-## 3. Add The GitHub Webhook
+## 3. Configure Teams And Email Alerts
+
+Edit `loopci.notifications.json` to route GitHub actors to notification targets:
+
+```json
+{
+  "defaultEmails": ["build-alerts@example.com"],
+  "useCommitAuthorEmailFallback": true,
+  "users": {
+    "github-login": {
+      "email": "developer@example.com"
+    }
+  }
+}
+```
+
+For Teams channel alerts, set either `LOOPCI_TEAMS_WEBHOOK_URL` or `defaultTeamsWebhookUrl`.
+
+For Gmail or Google Workspace email, configure SMTP values:
+
+```bash
+LOOPCI_EMAIL_FROM=loopci@example.com
+LOOPCI_SMTP_HOST=smtp.gmail.com
+LOOPCI_SMTP_PORT=587
+LOOPCI_SMTP_SECURE=false
+LOOPCI_SMTP_USER=loopci@example.com
+LOOPCI_SMTP_PASSWORD=<gmail-app-password-or-smtp-secret>
+```
+
+The first implementation sends Teams channel cards and email messages. Direct Teams DMs require a Teams bot registration and user ID mapping.
+
+## 4. Add The GitHub Webhook
 
 In GitHub, open the target repo:
 
@@ -54,7 +87,7 @@ In GitHub, open the target repo:
 
 LoopCI only accepts signed `workflow_run` events whose conclusion is failed, timed out, cancelled, or action required.
 
-## 4. Verify
+## 5. Verify
 
 ```bash
 curl https://your-loopci-domain.example/health

@@ -6,6 +6,7 @@ describe("loadEnv", () => {
 
     expect(env.PORT).toBe(4000);
     expect(env.LOOPCI_AI_PROVIDER).toBe("heuristic");
+    expect(env.LOOPCI_NOTIFICATIONS_ENABLED).toBe(true);
   });
 
   it("requires an OpenAI key when the OpenAI provider is selected", () => {

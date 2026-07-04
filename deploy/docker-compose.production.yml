@@ -10,11 +10,13 @@ services:
       PORT: 4000
       STATE_DIR: /app/state
       LOOPCI_POLICY_PATH: /app/config/loopci.config.json
+      LOOPCI_NOTIFICATION_USERS_PATH: /app/config/loopci.notifications.json
     ports:
       - "4000:4000"
     volumes:
       - loopci-state:/app/state
       - ../loopci.config.json:/app/config/loopci.config.json:ro
+      - ../loopci.notifications.json:/app/config/loopci.notifications.json:ro
     healthcheck:
       test:
         [

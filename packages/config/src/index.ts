@@ -11,6 +11,21 @@ const envSchema = z.object({
   OPENAI_MODEL: z.string().default("gpt-5.5"),
   LOOPCI_POLICY_PATH: z.string().optional(),
   LOOPCI_PUBLIC_URL: z.string().url().optional(),
+  LOOPCI_NOTIFICATIONS_ENABLED: z
+    .enum(["true", "false"])
+    .default("true")
+    .transform((value) => value === "true"),
+  LOOPCI_NOTIFICATION_USERS_PATH: z.string().optional(),
+  LOOPCI_TEAMS_WEBHOOK_URL: z.string().url().optional(),
+  LOOPCI_EMAIL_FROM: z.string().email().optional(),
+  LOOPCI_SMTP_HOST: z.string().optional(),
+  LOOPCI_SMTP_PORT: z.coerce.number().int().positive().default(587),
+  LOOPCI_SMTP_SECURE: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
+  LOOPCI_SMTP_USER: z.string().optional(),
+  LOOPCI_SMTP_PASSWORD: z.string().optional(),
   STATE_DIR: z.string().default("../../state"),
   GITHUB_WEBHOOK_SECRET: z.string().optional(),
   GITHUB_TOKEN: z.string().optional()
