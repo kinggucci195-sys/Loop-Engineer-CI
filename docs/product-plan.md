@@ -21,8 +21,6 @@ LoopCI wins by coordinating the response around failed pipelines:
 
 ## Phase 1: Incident Cards
 
-Status: in progress.
-
 Deliver a useful notification within seconds of a failed run.
 
 - GitHub signed webhook ingestion.

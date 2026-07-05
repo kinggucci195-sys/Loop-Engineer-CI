@@ -16,6 +16,16 @@ LoopCI turns failed GitHub Actions runs into owned repair plans with evidence, r
 
 When CI fails, teams lose time reading logs, guessing owners, rerunning flaky jobs, and deciding whether a fix is safe. LoopCI detects failed pipelines, identifies the likely owner, separates low-risk failures from risky ones, sends the right repair card to the right channel, and keeps merge authority behind human approval.
 
+## Design Principles
+
+- Humans approve every code change.
+- Policy overrides AI.
+- Deterministic checks come before model output.
+- Every recommendation includes evidence.
+- Integrate with existing engineering workflows instead of replacing them.
+- Optimize for trust before autonomy.
+- Stay focused on failed build response instead of becoming a CI platform, deployment platform, test runner, observability suite, or project manager.
+
 ## Memorable Line
 
 When CI breaks, someone has to investigate.
@@ -50,6 +60,21 @@ GitHub Actions detects failures. LoopCI owns the operational workflow after the 
 | Leaves coordination to people       | Sends Slack, Teams, email, Jira, and dashboard updates |
 
 The moat is not a single AI summary. It is policy, classification, ownership, evidence, routing, history, and human review working together as one loop.
+
+## How LoopCI Knows Why CI Failed
+
+LoopCI does not start by asking a model to guess.
+
+The default classifier uses deterministic signals:
+
+- Failed step name and log excerpt.
+- Regex signatures for format, lint, typecheck, unit-test, dependency, workflow-config, secret/permission, and flaky/noisy failures.
+- File extraction from log paths such as `.ts`, `.tsx`, `.js`, `.json`, `.yaml`, and `.yml`.
+- Risk mapping that treats format and lint as low-risk, workflow and secret/permission failures as high-risk, and unknown or broader failures as review-gated.
+- Recommended checks mapped to the detected failure class, such as `npm run lint`, `npm run typecheck`, `npm test`, `npm ci`, or permission review.
+- Confidence values that are higher for known signatures and lower for unknown failures.
+
+Optional OpenAI classification can enrich the diagnosis, but policy, risk rules, and deterministic checks remain the authority.
 
 ## Ideal Customer Profile
 
