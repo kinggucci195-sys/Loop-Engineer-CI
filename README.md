@@ -69,6 +69,24 @@ cp loopci.notifications.example.json loopci.notifications.json
 docker compose -f deploy/docker-compose.production.yml up --build -d
 ```
 
+## Dashboard Deployment
+
+The public dashboard is deployed from `apps/web` as a standalone Next.js app:
+
+```bash
+cd apps/web
+npx vercel deploy . --project web --prod --force --logs --yes
+```
+
+Current public URL:
+
+```text
+https://loopci.vercel.app
+```
+
+Do not deploy the repository root to the old Vercel Services project. The
+dashboard build expects the `apps/web` project root.
+
 Then add a GitHub webhook for `Workflow runs` pointing to:
 
 ```text

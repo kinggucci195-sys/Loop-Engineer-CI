@@ -9,6 +9,23 @@ LoopCI is split into two services:
 
 Both services share `STATE_DIR`, currently a mounted JSONL-backed state volume. This is simple and inspectable for an MVP; move the store to Postgres before high-concurrency or multi-region use.
 
+## Dashboard Hosting
+
+The dashboard is a separate Next.js app in `apps/web` and is currently hosted on Vercel at:
+
+```text
+https://loopci.vercel.app
+```
+
+Deploy it from the app directory, not the repository root:
+
+```bash
+cd apps/web
+npx vercel deploy . --project web --prod --force --logs --yes
+```
+
+The root repository is for the full monorepo and Docker services. Keep Vercel dashboard deploys scoped to `apps/web` so the build uses the app-local `vercel.json`, `postcss.config.mjs`, and `tsconfig.json`.
+
 ## Required Secrets
 
 - `GITHUB_WEBHOOK_SECRET`: verifies GitHub webhook delivery signatures.
