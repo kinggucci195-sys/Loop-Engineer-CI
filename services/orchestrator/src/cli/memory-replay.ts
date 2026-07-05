@@ -2,6 +2,7 @@ import { resolve } from "node:path";
 import { loadEnv } from "@loopci/config";
 import { createLogger } from "@loopci/logger";
 import { createJsonlMemoryStore } from "../memory/memory-store";
+import { isAnalysisOnlyReplay } from "../memory/replay";
 import type { MemoryReplayFilter } from "../memory/replay";
 import { replayMemoryProjections } from "../memory/replay";
 
@@ -18,7 +19,11 @@ async function main() {
   );
 
   logger.info(
-    { filter, projectionCount: records.length },
+    {
+      analysisOnly: isAnalysisOnlyReplay(filter),
+      filter,
+      projectionCount: records.length
+    },
     "Rebuilt LoopCI memory projections"
   );
 }

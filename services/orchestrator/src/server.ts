@@ -20,7 +20,8 @@ import {
 } from "./memory/memory-store";
 import {
   createFailureObservedEvent,
-  updateProjectionWithEvent
+  createRepairRequestedEvent,
+  rebuildProjectionFromEvents
 } from "./memory/projection-builder";
 import { recognizeEngineeringMemory } from "./memory/recognition-engine";
 import {
@@ -229,6 +230,7 @@ export function buildServer(dependencies: ServerDependencies) {
           status: "queued" as const
         };
         await dependencies.planStore.update(requestedPlan);
+        await recordRepairRequested(requestedPlan);
 
         return reply.code(202).send({
           accepted: true,
@@ -378,27 +380,43 @@ export function buildServer(dependencies: ServerDependencies) {
       fingerprint,
       ownership
     );
-    const existingEvents = await memoryStore.listEventsByFingerprintId(
-      fingerprint.id
-    );
-
     await memoryStore.appendEvent(failureObservedEvent);
+    const events = await memoryStore.listEventsByFingerprintId(fingerprint.id);
 
-    const projection = updateProjectionWithEvent(
-      fingerprint,
-      existingEvents,
-      failureObservedEvent
-    );
+    const projection = rebuildProjectionFromEvents(fingerprint, events);
     await memoryStore.writeProjection(projection);
 
-    const recognition = recognizeEngineeringMemory(projection, [
-      ...existingEvents,
-      failureObservedEvent
-    ]);
+    const recognition = recognizeEngineeringMemory(projection, events);
     return {
       memoryRecordId: projection.id,
       recognition
     };
+  }
+
+  async function recordRepairRequested(plan: RepairPlan): Promise<void> {
+    if (!dependencies.env.LOOPCI_MEMORY_ENABLED || !plan.memoryRecordId) {
+      return;
+    }
+
+    const events = await memoryStore.listEventsByMemoryId(plan.memoryRecordId);
+    const sourceEvent = events.find(
+      (event) => event.type === "failure-observed"
+    );
+
+    if (!sourceEvent) {
+      return;
+    }
+
+    const repairRequestedEvent = createRepairRequestedEvent(plan, sourceEvent);
+    await memoryStore.appendEvent(repairRequestedEvent);
+    const updatedEvents = await memoryStore.listEventsByMemoryId(
+      plan.memoryRecordId
+    );
+    const projection = rebuildProjectionFromEvents(
+      sourceEvent.fingerprint,
+      updatedEvents
+    );
+    await memoryStore.writeProjection(projection);
   }
 
   async function findPlan(planId: string) {

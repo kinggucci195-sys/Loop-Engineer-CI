@@ -26,7 +26,7 @@ export function recognizeEngineeringMemory(
     record.lastSuccessfulRepairPlanId;
   const confidence = scoreEngineeringRecognitionConfidence({
     occurrenceCount,
-    lastSeenAt: record.lastSeenAt,
+    lastSeenAt: record.lastObservedAt,
     successfulRepairCount: repairSucceededEvents.length,
     failedOutcomeCount
   });

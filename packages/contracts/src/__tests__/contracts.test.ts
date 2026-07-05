@@ -125,6 +125,10 @@ describe("LoopCI contracts", () => {
       version: 1,
       id: "memevt-1",
       type: "failure-observed",
+      idempotencyKey:
+        "failure-observed:github-actions:kinggucci195-sys/loopci:ci:1001:abcdef1:validate:npm test:fp-123",
+      source: "github-actions",
+      sourceEventId: "1001",
       memoryId: "memory-fp-123",
       fingerprintId: "fp-123",
       fingerprintType: "ci-failure",
@@ -182,6 +186,9 @@ describe("LoopCI contracts", () => {
       lifecycleState: "active",
       firstSeenAt: new Date().toISOString(),
       lastSeenAt: new Date().toISOString(),
+      firstObservedAt: new Date().toISOString(),
+      lastObservedAt: new Date().toISOString(),
+      lastUpdatedAt: new Date().toISOString(),
       relationships: {
         repository: "kinggucci195-sys/loopci",
         workflow: "ci",

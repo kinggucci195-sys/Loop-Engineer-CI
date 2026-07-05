@@ -68,8 +68,45 @@ describe("orchestrator server", () => {
     expect(await memoryStore.listEvents()).toEqual([
       expect.objectContaining({
         correlationId: "ci-run:github-actions:kinggucci195-sys/loopci:ci:1001",
+        idempotencyKey: expect.stringContaining(
+          "failure-observed:github-actions:kinggucci195-sys/loopci:ci:1001:abcdef1:validate:npm run lint:"
+        ),
+        source: "github-actions",
+        sourceEventId: "1001",
         fingerprintVersion: 1,
         actor: "kinggucci195-sys"
+      })
+    ]);
+  });
+
+  it("does not duplicate memory events when the same CI failure is retried", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "loopci-"));
+    const memoryStore = createMemoryStore(dir);
+    const server = buildServer({
+      env: loadEnv({ NODE_ENV: "test", STATE_DIR: dir }),
+      classifier: createHeuristicClassifier(),
+      planStore: createJsonlPlanStore(join(dir, "plans.jsonl")),
+      memoryStore,
+      notificationDispatcher: {
+        notifyRepairPlan: jest.fn()
+      }
+    });
+
+    await server.inject({
+      method: "POST",
+      url: "/events/github-actions/failure",
+      payload: createFailurePayload("1101")
+    });
+    await server.inject({
+      method: "POST",
+      url: "/events/github-actions/failure",
+      payload: createFailurePayload("1101")
+    });
+
+    expect(await memoryStore.listEvents()).toHaveLength(1);
+    expect(await memoryStore.listRecords()).toEqual([
+      expect.objectContaining({
+        occurrenceCount: 1
       })
     ]);
   });
@@ -202,6 +239,9 @@ describe("orchestrator server", () => {
       accepted: true,
       next: "queued-for-worker-evidence"
     });
+    expect(
+      (await createMemoryStore(dir).listEvents()).map((event) => event.type)
+    ).toEqual(["failure-observed", "repair-requested"]);
   });
 
   it("rejects unsigned GitHub webhooks", async () => {

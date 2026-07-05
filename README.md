@@ -144,6 +144,7 @@ docker compose up --build
 - [Product positioning](docs/product-positioning.md)
 - [Product execution plan](docs/product-plan.md)
 - [Engineering Memory Engine](docs/engineering-memory.md)
+- [Architecture decision: event source of truth](docs/architecture-decisions/ADR-001-event-source-of-truth.md)
 - [GitHub install guide](docs/install-github.md)
 - [Integrations guide](docs/integrations.md)
 - [Production runbook](docs/production.md)

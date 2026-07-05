@@ -16,6 +16,9 @@ function event(
     version: 1,
     id,
     type: "failure-observed",
+    idempotencyKey: `failure-observed:${repository}:${fingerprintId}:${planId}`,
+    source: "test",
+    sourceEventId: id,
     memoryId: `memory-${fingerprintId}`,
     fingerprintId,
     fingerprintType: "ci-failure",
@@ -64,7 +67,10 @@ describe("memory replay", () => {
         fingerprintVersion: 1,
         occurrenceCount: 2,
         firstSeenAt: "2026-07-05T00:00:00.000Z",
-        lastSeenAt: "2026-07-06T00:00:00.000Z"
+        lastSeenAt: "2026-07-06T00:00:00.000Z",
+        firstObservedAt: "2026-07-05T00:00:00.000Z",
+        lastObservedAt: "2026-07-06T00:00:00.000Z",
+        lastUpdatedAt: "2026-07-06T00:00:00.000Z"
       })
     ]);
   });
@@ -102,6 +108,38 @@ describe("memory replay", () => {
     ]);
   });
 
+  it("rebuilds complete fingerprint history for repository partitions", () => {
+    const records = rebuildMemoryProjections(
+      [
+        event(
+          "event-1",
+          "2026-07-05T00:00:00.000Z",
+          "plan-1",
+          "kinggucci195-sys/loopci",
+          "fp-1"
+        ),
+        event(
+          "event-2",
+          "2026-07-06T00:00:00.000Z",
+          "plan-2",
+          "kinggucci195-sys/loopci",
+          "fp-1"
+        )
+      ],
+      {
+        occurredAtFrom: "2026-07-06T00:00:00.000Z",
+        repository: "kinggucci195-sys/loopci"
+      }
+    );
+
+    expect(records).toEqual([
+      expect.objectContaining({
+        fingerprintId: "fp-1",
+        occurrenceCount: 2
+      })
+    ]);
+  });
+
   it("replaces stored projections from the event log", async () => {
     const dir = await mkdtemp(join(tmpdir(), "loopci-memory-replay-"));
     const store = createJsonlMemoryStore({
@@ -121,5 +159,31 @@ describe("memory replay", () => {
     expect(records).toHaveLength(1);
     expect(await store.listRecords()).toEqual(records);
     expect(await store.listEvents()).toHaveLength(2);
+  });
+
+  it("does not persist date-range analysis as canonical projections", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "loopci-memory-replay-"));
+    const store = createJsonlMemoryStore({
+      eventsPath: join(dir, "memory-events.jsonl"),
+      recordsPath: join(dir, "memory.jsonl")
+    });
+
+    await store.appendEvent(
+      event("event-1", "2026-07-05T00:00:00.000Z", "plan-1")
+    );
+    await store.appendEvent(
+      event("event-2", "2026-07-06T00:00:00.000Z", "plan-2")
+    );
+    const canonicalRecords = await replayMemoryProjections(store);
+    const analysisRecords = await replayMemoryProjections(store, {
+      occurredAtFrom: "2026-07-06T00:00:00.000Z"
+    });
+
+    expect(analysisRecords).toEqual([
+      expect.objectContaining({
+        occurrenceCount: 1
+      })
+    ]);
+    expect(await store.listRecords()).toEqual(canonicalRecords);
   });
 });

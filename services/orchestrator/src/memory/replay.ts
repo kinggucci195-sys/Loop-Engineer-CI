@@ -22,7 +22,7 @@ export function rebuildMemoryProjections(
 ): EngineeringMemoryRecord[] {
   const grouped = new Map<string, EngineeringMemoryEvent[]>();
 
-  for (const event of filterReplayEvents(events, filter)) {
+  for (const event of selectReplayEvents(events, filter)) {
     const groupKey = [
       event.fingerprintType,
       event.fingerprintVersion,
@@ -58,7 +58,7 @@ export async function replayMemoryProjections(
 
   if (Object.keys(filter).length === 0) {
     await store.replaceProjections(records);
-  } else {
+  } else if (isPersistentPartitionReplay(filter)) {
     for (const record of records) {
       await store.writeProjection(record);
     }
@@ -67,37 +67,78 @@ export async function replayMemoryProjections(
   return records;
 }
 
-function filterReplayEvents(
+function selectReplayEvents(
+  events: EngineeringMemoryEvent[],
+  filter: MemoryReplayFilter
+): EngineeringMemoryEvent[] {
+  if (Object.keys(filter).length === 0) {
+    return events;
+  }
+
+  if (filter.fingerprintId || filter.repository) {
+    const affectedFingerprintIds = new Set(
+      events
+        .filter((event) => matchesReplayFilter(event, filter))
+        .map((event) => event.fingerprintId)
+    );
+
+    return events.filter((event) =>
+      affectedFingerprintIds.has(event.fingerprintId)
+    );
+  }
+
+  return events.filter((event) => matchesReplayFilter(event, filter));
+}
+
+function matchesReplayFilter(
+  event: EngineeringMemoryEvent,
+  filter: MemoryReplayFilter
+): boolean {
+  if (filter.fingerprintId && event.fingerprintId !== filter.fingerprintId) {
+    return false;
+  }
+
+  if (
+    filter.fingerprintType &&
+    event.fingerprintType !== filter.fingerprintType
+  ) {
+    return false;
+  }
+
+  if (
+    filter.repository &&
+    event.relationships.repository !== filter.repository
+  ) {
+    return false;
+  }
+
+  if (filter.occurredAtFrom && event.occurredAt < filter.occurredAtFrom) {
+    return false;
+  }
+
+  if (filter.occurredAtTo && event.occurredAt > filter.occurredAtTo) {
+    return false;
+  }
+
+  return true;
+}
+
+function isPersistentPartitionReplay(filter: MemoryReplayFilter): boolean {
+  return Boolean(filter.fingerprintId || filter.repository);
+}
+
+export function isAnalysisOnlyReplay(filter: MemoryReplayFilter): boolean {
+  return (
+    Boolean(filter.occurredAtFrom || filter.occurredAtTo) &&
+    !isPersistentPartitionReplay(filter)
+  );
+}
+
+export function filterReplayEventsForAnalysis(
   events: EngineeringMemoryEvent[],
   filter: MemoryReplayFilter
 ): EngineeringMemoryEvent[] {
   return events.filter((event) => {
-    if (filter.fingerprintId && event.fingerprintId !== filter.fingerprintId) {
-      return false;
-    }
-
-    if (
-      filter.fingerprintType &&
-      event.fingerprintType !== filter.fingerprintType
-    ) {
-      return false;
-    }
-
-    if (
-      filter.repository &&
-      event.relationships.repository !== filter.repository
-    ) {
-      return false;
-    }
-
-    if (filter.occurredAtFrom && event.occurredAt < filter.occurredAtFrom) {
-      return false;
-    }
-
-    if (filter.occurredAtTo && event.occurredAt > filter.occurredAtTo) {
-      return false;
-    }
-
-    return true;
+    return matchesReplayFilter(event, filter);
   });
 }

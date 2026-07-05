@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type {
   EngineeringMemoryEvent,
   EngineeringMemoryOutcome,
@@ -17,10 +18,25 @@ export function createFailureObservedEvent(
   ownership: OwnershipResolution,
   occurredAt = new Date().toISOString()
 ): EngineeringMemoryEvent {
+  const idempotencyKey = [
+    "failure-observed",
+    plan.event.provider,
+    plan.event.repository,
+    plan.event.workflow,
+    plan.event.runId,
+    plan.event.commitSha,
+    plan.event.failedJob,
+    plan.event.failedStep,
+    fingerprint.id
+  ].join(":");
+
   return {
     version: 1,
-    id: `memevt-${plan.id}-failure-observed`,
+    id: createMemoryEventId(idempotencyKey),
     type: "failure-observed",
+    idempotencyKey,
+    source: plan.event.provider,
+    sourceEventId: plan.event.runId,
     memoryId: createMemoryId(fingerprint.id),
     fingerprintId: fingerprint.id,
     fingerprintType: fingerprint.type,
@@ -65,6 +81,46 @@ export function createFailureObservedEvent(
   };
 }
 
+export function createRepairRequestedEvent(
+  plan: RepairPlan,
+  sourceEvent: EngineeringMemoryEvent,
+  occurredAt = new Date().toISOString()
+): EngineeringMemoryEvent {
+  const idempotencyKey = ["repair-requested", plan.id].join(":");
+  const actor =
+    plan.event.triggeringActor ??
+    plan.event.actor ??
+    plan.event.commitAuthorEmail ??
+    undefined;
+
+  return {
+    version: 1,
+    id: createMemoryEventId(idempotencyKey),
+    type: "repair-requested",
+    idempotencyKey,
+    source: "loopci-action",
+    sourceEventId: plan.id,
+    memoryId: sourceEvent.memoryId,
+    fingerprintId: sourceEvent.fingerprintId,
+    fingerprintType: sourceEvent.fingerprintType,
+    fingerprintVersion: sourceEvent.fingerprintVersion,
+    fingerprint: sourceEvent.fingerprint,
+    correlationId: sourceEvent.correlationId,
+    causationId: sourceEvent.id,
+    actor,
+    planId: plan.id,
+    occurredAt,
+    relationships: {
+      ...sourceEvent.relationships,
+      repairPlanIds: [plan.id]
+    },
+    outcome: "fix-requested",
+    metadata: {
+      requestedStatus: plan.status
+    }
+  };
+}
+
 export function createMemoryId(fingerprintId: string): string {
   return `memory-${fingerprintId}`;
 }
@@ -86,6 +142,9 @@ export function rebuildProjectionFromEvents(
   const occurrenceCount = sortedEvents.filter(
     (event) => event.type === "failure-observed"
   ).length;
+  const observedEvents = sortedEvents.filter(
+    (event) => event.type === "failure-observed"
+  );
   const outcomes = sortedEvents
     .map((event) => event.outcome)
     .filter((outcome): outcome is EngineeringMemoryOutcome => Boolean(outcome));
@@ -104,6 +163,11 @@ export function rebuildProjectionFromEvents(
     lifecycleState: "active",
     firstSeenAt: firstEvent.occurredAt,
     lastSeenAt: lastEvent.occurredAt,
+    firstObservedAt: observedEvents[0]?.occurredAt ?? firstEvent.occurredAt,
+    lastObservedAt:
+      observedEvents[observedEvents.length - 1]?.occurredAt ??
+      lastEvent.occurredAt,
+    lastUpdatedAt: lastEvent.occurredAt,
     relationships,
     outcomes,
     occurrenceCount,
@@ -114,6 +178,10 @@ export function rebuildProjectionFromEvents(
     ).length,
     lastSuccessfulRepairPlanId
   };
+}
+
+function createMemoryEventId(idempotencyKey: string): string {
+  return `memevt-${createHash("sha256").update(idempotencyKey).digest("hex").slice(0, 24)}`;
 }
 
 export function updateProjectionWithEvent(

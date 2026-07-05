@@ -11,6 +11,10 @@ const event: EngineeringMemoryEvent = {
   version: 1,
   id: "memevt-1",
   type: "failure-observed",
+  idempotencyKey:
+    "failure-observed:github-actions:kinggucci195-sys/loopci:ci:1001:abcdef1:validate:npm run lint:fp-1",
+  source: "github-actions",
+  sourceEventId: "1001",
   memoryId: "memory-fp-1",
   fingerprintId: "fp-1",
   fingerprintType: "ci-failure",
@@ -54,6 +58,9 @@ const record: EngineeringMemoryRecord = {
   lifecycleState: "active",
   firstSeenAt: "2026-07-05T00:00:00.000Z",
   lastSeenAt: "2026-07-05T00:00:00.000Z",
+  firstObservedAt: "2026-07-05T00:00:00.000Z",
+  lastObservedAt: "2026-07-05T00:00:00.000Z",
+  lastUpdatedAt: "2026-07-05T00:00:00.000Z",
   relationships: {
     repository: "kinggucci195-sys/loopci",
     workflow: "ci",
@@ -84,13 +91,32 @@ describe("createJsonlMemoryStore", () => {
   it("appends immutable events and reads by memory id and fingerprint id", async () => {
     const store = await createStore();
 
-    await store.appendEvent(event);
+    await expect(store.appendEvent(event)).resolves.toEqual({
+      appended: true
+    });
 
     expect(await store.listEvents()).toHaveLength(1);
     expect(await store.listEventsByMemoryId(event.memoryId)).toHaveLength(1);
     expect(
       await store.listEventsByFingerprintId(event.fingerprintId)
     ).toHaveLength(1);
+  });
+
+  it("rejects duplicate events by idempotency key", async () => {
+    const store = await createStore();
+
+    await store.appendEvent(event);
+    await expect(
+      store.appendEvent({
+        ...event,
+        id: "memevt-different-id"
+      })
+    ).resolves.toEqual({
+      appended: false,
+      duplicateOf: event.id
+    });
+
+    expect(await store.listEvents()).toEqual([event]);
   });
 
   it("writes projections without mutating the event log", async () => {
@@ -111,7 +137,9 @@ describe("createJsonlMemoryStore", () => {
     const updatedRecord: EngineeringMemoryRecord = {
       ...record,
       occurrenceCount: 2,
-      lastSeenAt: "2026-07-06T00:00:00.000Z"
+      lastSeenAt: "2026-07-06T00:00:00.000Z",
+      lastObservedAt: "2026-07-06T00:00:00.000Z",
+      lastUpdatedAt: "2026-07-06T00:00:00.000Z"
     };
 
     await store.appendEvent(event);

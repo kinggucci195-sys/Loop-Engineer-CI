@@ -36,6 +36,9 @@ function event(
     version: 1,
     id,
     type,
+    idempotencyKey: `${type}:${planId}:${id}`,
+    source: "test",
+    sourceEventId: id,
     memoryId: createMemoryId(fingerprint.id),
     fingerprintId: fingerprint.id,
     fingerprintType: fingerprint.type,
@@ -145,7 +148,10 @@ describe("ProjectionBuilder", () => {
       lifecycleState: "active",
       occurrenceCount: 1,
       firstSeenAt: "2026-07-05T00:00:00.000Z",
-      lastSeenAt: "2026-07-05T00:00:00.000Z"
+      lastSeenAt: "2026-07-05T00:00:00.000Z",
+      firstObservedAt: "2026-07-05T00:00:00.000Z",
+      lastObservedAt: "2026-07-05T00:00:00.000Z",
+      lastUpdatedAt: "2026-07-05T00:00:00.000Z"
     });
   });
 
@@ -170,6 +176,7 @@ describe("ProjectionBuilder", () => {
       "plan-2"
     ]);
     expect(projection.lastSeenAt).toBe("2026-07-06T00:00:00.000Z");
+    expect(projection.lastObservedAt).toBe("2026-07-06T00:00:00.000Z");
   });
 
   it("updates outcome projections without rewriting event history", () => {
@@ -183,6 +190,8 @@ describe("ProjectionBuilder", () => {
     expect(projection.occurrenceCount).toBe(1);
     expect(projection.previousRepairCount).toBe(1);
     expect(projection.lastSuccessfulRepairPlanId).toBe("plan-1");
+    expect(projection.lastObservedAt).toBe("2026-07-05T00:00:00.000Z");
+    expect(projection.lastUpdatedAt).toBe("2026-07-05T00:05:00.000Z");
     expect(events).toHaveLength(2);
   });
 

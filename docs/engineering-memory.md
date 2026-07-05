@@ -50,6 +50,9 @@ Recognition is not stored as an event because it is derived analysis. If the rec
 
 Each event includes:
 
+- `idempotencyKey`
+- `source`
+- optional `sourceEventId`
 - canonical `fingerprint`
 - `fingerprintVersion`
 - `correlationId`
@@ -57,6 +60,8 @@ Each event includes:
 - optional `actor`
 
 The top-level fingerprint id/type/version are retained for indexing. The `fingerprint` snapshot preserves the canonical source fields used to derive the id, so replay and future migrations do not depend on reconstructing old normalization inputs from unrelated payloads.
+
+`MemoryStore` rejects duplicate event ids and duplicate idempotency keys. GitHub, Slack, worker, or network retries should not inflate occurrence counts.
 
 ### ProjectionBuilder
 
@@ -92,6 +97,8 @@ npm run memory:replay --workspace @loopci/orchestrator -- --from=2026-07-01T00:0
 
 Partitioned replay updates matching projections without replacing unrelated records.
 
+Date-range replay is analysis-only unless it is paired with a stable partition such as repository or fingerprint id. A partial event stream must not overwrite canonical projections.
+
 ### Lifecycle
 
 `EngineeringMemoryRecord` has a lifecycle state:
@@ -121,6 +128,14 @@ Normalization removes noisy timestamps, URLs, SHAs, run ids, and unstable line o
 Fingerprints are versioned with `version: 1`. Future normalization changes can introduce a new fingerprint version without corrupting historical recognition.
 
 Old events remain on their original fingerprint version. A future migration can write new facts or mark old projections `superseded`, but replay must never silently recalculate old fingerprint ids with a newer algorithm.
+
+Migration policy:
+
+- old events are immutable forever
+- projections may change as projection schemas evolve
+- replay never rewrites events
+- migrations append new facts instead of editing history
+- old fingerprint versions remain recognizable
 
 Future fingerprint types can represent deployments, incidents, pull requests, reviews, rollbacks, or approvals without changing the memory engine contract.
 

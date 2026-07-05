@@ -13,8 +13,13 @@ import {
   type EngineeringMemoryRecord
 } from "@loopci/contracts";
 
+export interface MemoryAppendResult {
+  appended: boolean;
+  duplicateOf?: string;
+}
+
 export interface MemoryStore {
-  appendEvent(event: EngineeringMemoryEvent): Promise<void>;
+  appendEvent(event: EngineeringMemoryEvent): Promise<MemoryAppendResult>;
   listEvents(): Promise<EngineeringMemoryEvent[]>;
   listEventsByMemoryId(memoryId: string): Promise<EngineeringMemoryEvent[]>;
   listEventsByFingerprintId(
@@ -67,8 +72,24 @@ export function createJsonlMemoryStore(input: {
 
   return {
     appendEvent: async (event) => {
+      const existingEvent = (await listEvents()).find(
+        (candidate) =>
+          candidate.id === event.id ||
+          candidate.idempotencyKey === event.idempotencyKey
+      );
+
+      if (existingEvent) {
+        return {
+          appended: false,
+          duplicateOf: existingEvent.id
+        };
+      }
+
       await mkdir(dirname(input.eventsPath), { recursive: true });
       await appendFile(input.eventsPath, `${JSON.stringify(event)}\n`, "utf8");
+      return {
+        appended: true
+      };
     },
     listEvents,
     listEventsByMemoryId: async (memoryId) =>
