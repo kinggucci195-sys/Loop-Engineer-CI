@@ -54,7 +54,7 @@ const repairPlans = [
     branch: "main",
     failure: "workflow-config",
     owner: "kinggucci195-sys",
-    channel: "Teams + email",
+    channel: "Slack + Teams",
     risk: "high",
     status: "Human review",
     summary:
@@ -66,7 +66,7 @@ const repairPlans = [
     branch: "feature/invoices",
     failure: "lint",
     owner: "maya-dev",
-    channel: "Teams",
+    channel: "Slack",
     risk: "low",
     status: "Fix ready",
     summary: "ESLint rule violation can be repaired with a scoped source patch."
@@ -92,12 +92,12 @@ const timeline = [
   },
   {
     title: "Actor routed",
-    detail: "GitHub user mapped to Teams channel and email fallback.",
+    detail: "GitHub user mapped to Slack, Teams, or email fallback.",
     icon: IoPeopleOutline
   },
   {
     title: "Repair card sent",
-    detail: "Teams and email include diagnosis, run link, and fix request.",
+    detail: "Chat and email include diagnosis, owner, risk, and fix request.",
     icon: IoMailUnreadOutline
   },
   {
@@ -187,7 +187,7 @@ export function DashboardShell() {
           <div className="mt-8 hidden rounded-[8px] border border-[var(--panel-border)] bg-[var(--panel)] p-4 lg:block">
             <p className="text-sm font-semibold">Current authority</p>
             <p className="mt-2 text-sm leading-6 text-[var(--muted-foreground)]">
-              LoopCI can diagnose, notify, and queue low-risk repair work.
+              The operational layer between a failed build and a safe fix.
             </p>
             <p className="mt-4 rounded-[8px] bg-[oklch(0.24_0.045_75)] px-3 py-2 text-sm font-semibold text-[var(--warning)]">
               No auto-merge
@@ -202,10 +202,10 @@ export function DashboardShell() {
           >
             <div>
               <p className="text-sm font-semibold text-[var(--accent-strong)]">
-                AI incident response for engineering teams
+                Failed build response for engineering teams
               </p>
               <h1 className="mt-2 text-[clamp(2rem,5vw,4rem)] font-semibold leading-[1]">
-                Broken builds become owned repair cards.
+                When CI breaks, LoopCI already investigated.
               </h1>
             </div>
             <div className="flex flex-wrap gap-3">

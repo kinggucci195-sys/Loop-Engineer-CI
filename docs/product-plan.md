@@ -1,10 +1,14 @@
 # Product Execution Plan
 
-This plan turns the product critique into engineering work. The goal is to make LoopCI useful as an incident response layer for broken builds, not just a log explainer.
+This plan turns the product critique into engineering work. The goal is to make LoopCI useful as the operational layer between a failed build and a safe fix, not just a log explainer.
 
 ## Product Thesis
 
 Engineering teams do not only need a CI failure summary. They need the failure routed, owned, risk-scored, tracked, and resolved without losing control of merge and deploy authority.
+
+The product should be understood in ten seconds:
+
+> Every failed CI build costs engineering time. LoopCI turns failed GitHub Actions runs into owned repair plans with evidence, risk analysis, and human-approved next steps.
 
 LoopCI wins by coordinating the response around failed pipelines:
 
@@ -31,6 +35,13 @@ Deliver a useful notification within seconds of a failed run.
 - "Fix this error" confirmation route for low-risk plans.
 
 Success metric: an engineer can understand who owns the failure, why it failed, and what action is safe without opening raw CI logs first.
+
+README proof points:
+
+- Show the dashboard screenshot before architecture.
+- Explain the simple loop before listing capabilities.
+- Keep stack and install details below the product story.
+- Avoid long roadmaps that look like generic AI startup promises.
 
 ## Phase 2: GitHub-Native Response
 

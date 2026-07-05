@@ -2,19 +2,25 @@
 
 ## Category
 
-LoopCI is AI incident response for engineering teams.
+LoopCI is failed build response for engineering teams.
 
 It should not be positioned as a generic AI coding assistant or "AI that fixes CI." That puts it in the same mental bucket as Copilot, Cursor, Claude Code, Devin, and ChatGPT.
 
-LoopCI is closer to PagerDuty, FireHydrant, Linear, Jira Automation, Datadog Incident Response, and Opsgenie, but focused on software delivery failures.
+LoopCI is closer to PagerDuty, FireHydrant, Linear, Jira Automation, Datadog Incident Response, and Opsgenie than to a coding assistant, but focused on software delivery failures.
 
 ## One-Line Pitch
 
-LoopCI turns failed pipelines into owned, evidence-backed repair cards across GitHub, Slack, Teams, and email.
+LoopCI turns failed GitHub Actions runs into owned repair plans with evidence, risk analysis, and human-approved next steps.
 
 ## Short Pitch
 
 When CI fails, teams lose time reading logs, guessing owners, rerunning flaky jobs, and deciding whether a fix is safe. LoopCI detects failed pipelines, identifies the likely owner, separates low-risk failures from risky ones, sends the right repair card to the right channel, and keeps merge authority behind human approval.
+
+## Memorable Line
+
+When CI breaks, someone has to investigate.
+
+LoopCI already did.
 
 ## Why It Is Different From ChatGPT
 
@@ -77,7 +83,7 @@ Every repair plan includes the failure summary, recommended checks, residual ris
 
 ### 4. Meet Teams Where They Work
 
-GitHub, Teams, email today. Slack, Jira, Linear, and PagerDuty next.
+GitHub, Slack, Teams, and email today. Jira, Linear, and PagerDuty next.
 
 ### 5. Human Approval By Design
 
@@ -129,7 +135,7 @@ Do not lead with:
 
 Lead with:
 
-- "AI incident response for engineering teams"
-- "Turns failed pipelines into owned repair cards"
+- "Failed build response for engineering teams"
+- "Turns failed GitHub Actions runs into owned repair plans"
 - "Routes CI failures to the right engineer with evidence"
 - "Keeps AI-assisted repair behind policy and human approval"
