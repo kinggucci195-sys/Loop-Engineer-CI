@@ -20,7 +20,6 @@ import {
 } from "./memory/memory-store";
 import {
   createFailureObservedEvent,
-  createRecognitionGeneratedEvent,
   updateProjectionWithEvent
 } from "./memory/projection-builder";
 import { recognizeEngineeringMemory } from "./memory/recognition-engine";
@@ -312,12 +311,20 @@ export function buildServer(dependencies: ServerDependencies) {
       initialClassification,
       policy
     );
-    const plan = createRepairPlan(policyEvent, classification);
-    const recognition = await recordEngineeringMemory(
+    let plan = createRepairPlan(policyEvent, classification);
+    const memoryResult = await recordEngineeringMemory(
       policyEvent,
       classification,
       plan
     );
+    const recognition = memoryResult?.recognition ?? null;
+
+    if (memoryResult) {
+      plan = {
+        ...plan,
+        memoryRecordId: memoryResult.memoryRecordId
+      };
+    }
 
     await dependencies.planStore.append(plan);
     await notificationDispatcher.notifyRepairPlan(plan);
@@ -349,7 +356,10 @@ export function buildServer(dependencies: ServerDependencies) {
     event: CiFailureEvent,
     classification: FailureClassification,
     plan: RepairPlan
-  ): Promise<EngineeringRecognitionSummary | null> {
+  ): Promise<{
+    memoryRecordId: string;
+    recognition: EngineeringRecognitionSummary;
+  } | null> {
     if (!dependencies.env.LOOPCI_MEMORY_ENABLED) {
       return null;
     }
@@ -373,11 +383,10 @@ export function buildServer(dependencies: ServerDependencies) {
       ...existingEvents,
       failureObservedEvent
     ]);
-    await memoryStore.appendEvent(
-      createRecognitionGeneratedEvent(plan, fingerprint, recognition.confidence)
-    );
-
-    return recognition;
+    return {
+      memoryRecordId: projection.id,
+      recognition
+    };
   }
 
   async function findPlan(planId: string) {

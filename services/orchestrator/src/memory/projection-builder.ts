@@ -3,6 +3,7 @@ import type {
   EngineeringMemoryOutcome,
   EngineeringMemoryRecord,
   EngineeringMemoryRelationships,
+  Fingerprint,
   FailureFingerprint,
   RepairPlan
 } from "@loopci/contracts";
@@ -27,6 +28,9 @@ export function createFailureObservedEvent(
     memoryId: createMemoryId(fingerprint.id),
     fingerprintId: fingerprint.id,
     fingerprintType: fingerprint.type,
+    fingerprintVersion: fingerprint.version,
+    correlationId: createCiRunCorrelationId(plan),
+    actor: owner,
     planId: plan.id,
     occurredAt,
     relationships: {
@@ -41,37 +45,10 @@ export function createFailureObservedEvent(
     metadata: {
       failedJob: plan.event.failedJob,
       failedStep: plan.event.failedStep,
+      fingerprintSignature: fingerprint.signature,
+      fingerprintNormalizedSignature: fingerprint.normalizedSignature,
       kind: plan.classification.kind,
       risk: plan.classification.risk
-    }
-  };
-}
-
-export function createRecognitionGeneratedEvent(
-  plan: RepairPlan,
-  fingerprint: FailureFingerprint,
-  confidence: number,
-  occurredAt = new Date().toISOString()
-): EngineeringMemoryEvent {
-  return {
-    version: 1,
-    id: `memevt-${plan.id}-recognition-generated`,
-    type: "recognition-generated",
-    memoryId: createMemoryId(fingerprint.id),
-    fingerprintId: fingerprint.id,
-    fingerprintType: fingerprint.type,
-    planId: plan.id,
-    occurredAt,
-    relationships: {
-      repository: plan.event.repository,
-      workflow: plan.event.workflow,
-      commitSha: plan.event.commitSha,
-      owner: plan.event.triggeringActor ?? plan.event.actor,
-      files: fingerprint.likelyFiles,
-      repairPlanIds: [plan.id]
-    },
-    metadata: {
-      confidence
     }
   };
 }
@@ -81,7 +58,7 @@ export function createMemoryId(fingerprintId: string): string {
 }
 
 export function rebuildProjectionFromEvents(
-  fingerprint: FailureFingerprint,
+  fingerprint: Pick<Fingerprint, "id" | "type" | "version">,
   events: EngineeringMemoryEvent[]
 ): EngineeringMemoryRecord {
   const sortedEvents = [...events].sort((left, right) =>
@@ -111,6 +88,7 @@ export function rebuildProjectionFromEvents(
     recordType: "ci-failure",
     fingerprintId: fingerprint.id,
     fingerprintType: fingerprint.type,
+    fingerprintVersion: fingerprint.version,
     firstSeenAt: firstEvent.occurredAt,
     lastSeenAt: lastEvent.occurredAt,
     relationships,
@@ -126,11 +104,21 @@ export function rebuildProjectionFromEvents(
 }
 
 export function updateProjectionWithEvent(
-  fingerprint: FailureFingerprint,
+  fingerprint: Pick<Fingerprint, "id" | "type" | "version">,
   existingEvents: EngineeringMemoryEvent[],
   event: EngineeringMemoryEvent
 ): EngineeringMemoryRecord {
   return rebuildProjectionFromEvents(fingerprint, [...existingEvents, event]);
+}
+
+export function createCiRunCorrelationId(plan: RepairPlan): string {
+  return [
+    "ci-run",
+    plan.event.provider,
+    plan.event.repository,
+    plan.event.workflow,
+    plan.event.runId
+  ].join(":");
 }
 
 function mergeRelationships(

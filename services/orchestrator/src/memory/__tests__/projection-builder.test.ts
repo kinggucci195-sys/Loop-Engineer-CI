@@ -11,6 +11,7 @@ import {
 const fingerprint: FailureFingerprint = {
   id: "fp-unit",
   type: "ci-failure",
+  version: 1,
   signature: "repo|ci|validate|npm test|unit-test|expected 200",
   repository: "kinggucci195-sys/loopci",
   workflow: "ci",
@@ -34,6 +35,9 @@ function event(
     memoryId: createMemoryId(fingerprint.id),
     fingerprintId: fingerprint.id,
     fingerprintType: fingerprint.type,
+    fingerprintVersion: fingerprint.version,
+    correlationId: "ci-run:github-actions:kinggucci195-sys/loopci:ci:1001",
+    actor: "gerald",
     planId,
     occurredAt,
     relationships: {
@@ -61,6 +65,7 @@ describe("ProjectionBuilder", () => {
 
     expect(projection).toMatchObject({
       id: createMemoryId(fingerprint.id),
+      fingerprintVersion: 1,
       occurrenceCount: 1,
       firstSeenAt: "2026-07-05T00:00:00.000Z",
       lastSeenAt: "2026-07-05T00:00:00.000Z"

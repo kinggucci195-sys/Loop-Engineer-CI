@@ -29,6 +29,8 @@ The source files are derived from `STATE_DIR`:
 - `memory-events.jsonl`
 - `memory.jsonl`
 
+The interface is storage-agnostic. `JsonlMemoryStore` is the v1 implementation; future implementations can use SQLite, Postgres, object storage, or another durable backend without changing recognition logic.
+
 ### Events Are Source Of Truth
 
 `EngineeringMemoryEvent` is append-only and versioned with `version: 1`.
@@ -40,9 +42,17 @@ v1 event types:
 - `repair-succeeded`
 - `repair-failed`
 - `regression-detected`
-- `recognition-generated`
 
 Projection fields such as occurrence count are caches. If a count disagrees with the event log, the event log wins.
+
+Recognition is not stored as an event because it is derived analysis. If the recognition algorithm changes, LoopCI should recompute recognition from facts instead of preserving stale analysis.
+
+Each event includes:
+
+- `fingerprintVersion`
+- `correlationId`
+- optional `causationId`
+- optional `actor`
 
 ### ProjectionBuilder
 
@@ -57,6 +67,15 @@ Projection fields such as occurrence count are caches. If a count disagrees with
 - last successful repair plan id
 
 The projection can be rebuilt later if JSONL storage is replaced by a database.
+
+LoopCI includes a replay command for recovery and migration:
+
+```bash
+npm run build --workspace @loopci/orchestrator
+npm run memory:replay --workspace @loopci/orchestrator
+```
+
+Replay reads `memory-events.jsonl`, rebuilds projections, and replaces `memory.jsonl`.
 
 ### Fingerprints
 
@@ -73,6 +92,8 @@ A failure fingerprint uses deterministic exact matching from:
 - likely files
 
 Normalization removes noisy timestamps, URLs, SHAs, run ids, and unstable line or column values where safe.
+
+Fingerprints are versioned with `version: 1`. Future normalization changes can introduce a new fingerprint version without corrupting historical recognition.
 
 Future fingerprint types can represent deployments, incidents, pull requests, reviews, rollbacks, or approvals without changing the memory engine contract.
 

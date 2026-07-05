@@ -55,6 +55,7 @@ export const classificationSchema = z.object({
 
 export const repairPlanSchema = z.object({
   id: z.string().min(1),
+  memoryRecordId: z.string().min(1).optional(),
   event: ciFailureEventSchema,
   classification: classificationSchema,
   status: z.enum([
@@ -102,6 +103,7 @@ export const fingerprintTypeSchema = z.enum(["ci-failure"]);
 export const fingerprintSchema = z.object({
   id: z.string().min(1),
   type: fingerprintTypeSchema,
+  version: z.literal(1),
   signature: z.string().min(1)
 });
 
@@ -129,8 +131,7 @@ export const engineeringMemoryEventTypeSchema = z.enum([
   "repair-requested",
   "repair-succeeded",
   "repair-failed",
-  "regression-detected",
-  "recognition-generated"
+  "regression-detected"
 ]);
 
 const nullableRelationshipSchema = z.string().min(1).nullable().optional();
@@ -155,6 +156,10 @@ export const engineeringMemoryEventSchema = z.object({
   memoryId: z.string().min(1),
   fingerprintId: z.string().min(1),
   fingerprintType: fingerprintTypeSchema,
+  fingerprintVersion: z.literal(1),
+  correlationId: z.string().min(1),
+  causationId: z.string().min(1).optional(),
+  actor: z.string().min(1).optional(),
   planId: z.string().min(1).optional(),
   occurredAt: z.string().datetime(),
   relationships: engineeringMemoryRelationshipsSchema.default({}),
@@ -176,6 +181,7 @@ export const engineeringMemoryRecordSchema = z.object({
   recordType: z.literal("ci-failure"),
   fingerprintId: z.string().min(1),
   fingerprintType: fingerprintTypeSchema,
+  fingerprintVersion: z.literal(1),
   firstSeenAt: z.string().datetime(),
   lastSeenAt: z.string().datetime(),
   relationships: engineeringMemoryRelationshipsSchema,

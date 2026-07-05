@@ -10,6 +10,7 @@ const record: EngineeringMemoryRecord = {
   recordType: "ci-failure",
   fingerprintId: "fp-1",
   fingerprintType: "ci-failure",
+  fingerprintVersion: 1,
   firstSeenAt: new Date().toISOString(),
   lastSeenAt: new Date().toISOString(),
   relationships: {
@@ -34,6 +35,9 @@ function event(
     memoryId: record.id,
     fingerprintId: record.fingerprintId,
     fingerprintType: record.fingerprintType,
+    fingerprintVersion: record.fingerprintVersion,
+    correlationId: "ci-run:github-actions:kinggucci195-sys/loopci:ci:1001",
+    actor: "gerald",
     planId,
     occurredAt: new Date().toISOString(),
     relationships: {

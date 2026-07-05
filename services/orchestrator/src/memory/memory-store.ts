@@ -26,6 +26,7 @@ export interface MemoryStore {
     fingerprintId: string
   ): Promise<EngineeringMemoryRecord | null>;
   writeProjection(record: EngineeringMemoryRecord): Promise<void>;
+  replaceProjections(records: EngineeringMemoryRecord[]): Promise<void>;
 }
 
 function isMissingFileError(error: unknown): boolean {
@@ -96,7 +97,8 @@ export function createJsonlMemoryStore(input: {
       }
 
       await writeAllRecords(records);
-    }
+    },
+    replaceProjections: writeAllRecords
   };
 }
 

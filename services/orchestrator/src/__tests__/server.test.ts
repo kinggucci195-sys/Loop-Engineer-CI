@@ -59,11 +59,19 @@ describe("orchestrator server", () => {
       recognitionType: "exact-fingerprint",
       occurrenceCount: 1
     });
-    expect(await memoryStore.listEvents()).toHaveLength(2);
+    expect(response.json().plan.memoryRecordId).toBeDefined();
+    expect(await memoryStore.listEvents()).toHaveLength(1);
     expect(await memoryStore.listRecords()).toHaveLength(1);
     expect((await memoryStore.listEvents()).map((event) => event.type)).toEqual(
-      ["failure-observed", "recognition-generated"]
+      ["failure-observed"]
     );
+    expect(await memoryStore.listEvents()).toEqual([
+      expect.objectContaining({
+        correlationId: "ci-run:github-actions:kinggucci195-sys/loopci:ci:1001",
+        fingerprintVersion: 1,
+        actor: "kinggucci195-sys"
+      })
+    ]);
   });
 
   it("reports readiness when the plan store is available", async () => {
@@ -307,7 +315,7 @@ describe("orchestrator server", () => {
         seenBefore: true
       }
     });
-    expect(detailResponse.json().events).toHaveLength(4);
+    expect(detailResponse.json().events).toHaveLength(2);
   });
 
   it("returns 404 for unknown memory ids", async () => {

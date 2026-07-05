@@ -102,6 +102,7 @@ describe("LoopCI contracts", () => {
     const fingerprint = fingerprintSchema.parse({
       id: "fp-123",
       type: "ci-failure",
+      version: 1,
       signature: "repo|ci|test|npm test|unit-test|expected 200"
     });
 
@@ -127,6 +128,9 @@ describe("LoopCI contracts", () => {
       memoryId: "memory-fp-123",
       fingerprintId: "fp-123",
       fingerprintType: "ci-failure",
+      fingerprintVersion: 1,
+      correlationId: "ci-run:github-actions:kinggucci195-sys/loopci:ci:1001",
+      actor: "gerald",
       planId: "plan-1",
       occurredAt: new Date().toISOString(),
       relationships: {
@@ -159,6 +163,7 @@ describe("LoopCI contracts", () => {
       recordType: "ci-failure",
       fingerprintId: "fp-123",
       fingerprintType: "ci-failure",
+      fingerprintVersion: 1,
       firstSeenAt: new Date().toISOString(),
       lastSeenAt: new Date().toISOString(),
       relationships: {

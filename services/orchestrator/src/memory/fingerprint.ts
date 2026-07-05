@@ -21,6 +21,7 @@ export function createFailureFingerprint(
   return {
     id: `fp-${hash(signature)}`,
     type: "ci-failure",
+    version: 1,
     signature,
     repository: event.repository,
     workflow: event.workflow,

@@ -14,6 +14,9 @@ const event: EngineeringMemoryEvent = {
   memoryId: "memory-fp-1",
   fingerprintId: "fp-1",
   fingerprintType: "ci-failure",
+  fingerprintVersion: 1,
+  correlationId: "ci-run:github-actions:kinggucci195-sys/loopci:ci:1001",
+  actor: "gerald",
   planId: "plan-1",
   occurredAt: "2026-07-05T00:00:00.000Z",
   relationships: {
@@ -32,6 +35,7 @@ const record: EngineeringMemoryRecord = {
   recordType: "ci-failure",
   fingerprintId: "fp-1",
   fingerprintType: "ci-failure",
+  fingerprintVersion: 1,
   firstSeenAt: "2026-07-05T00:00:00.000Z",
   lastSeenAt: "2026-07-05T00:00:00.000Z",
   relationships: {
@@ -84,5 +88,21 @@ describe("createJsonlMemoryStore", () => {
     expect(await store.getRecordByFingerprintId(record.fingerprintId)).toEqual(
       record
     );
+  });
+
+  it("replaces projections without mutating the event log", async () => {
+    const store = await createStore();
+    const updatedRecord: EngineeringMemoryRecord = {
+      ...record,
+      occurrenceCount: 2,
+      lastSeenAt: "2026-07-06T00:00:00.000Z"
+    };
+
+    await store.appendEvent(event);
+    await store.writeProjection(record);
+    await store.replaceProjections([updatedRecord]);
+
+    expect(await store.listEvents()).toEqual([event]);
+    expect(await store.listRecords()).toEqual([updatedRecord]);
   });
 });

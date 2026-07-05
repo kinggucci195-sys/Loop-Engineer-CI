@@ -33,6 +33,7 @@ describe("createFailureFingerprint", () => {
 
     expect(first.id).toBe(second.id);
     expect(first.signature).toBe(second.signature);
+    expect(first.version).toBe(1);
   });
 
   it("ignores noisy timestamps, urls, shas, run ids, and line numbers", () => {
