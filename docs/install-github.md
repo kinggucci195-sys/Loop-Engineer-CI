@@ -78,7 +78,20 @@ LOOPCI_SMTP_PASSWORD=<gmail-app-password-or-smtp-secret>
 
 The first implementation sends Slack channel cards, Teams channel cards, and email messages. Direct Teams DMs require a Teams bot registration and user ID mapping.
 
-## 4. Add The GitHub Webhook
+## 4. Configure Jira Issue Creation
+
+Jira issue creation is optional and disabled by default. Enable it only after creating a Jira API token for the account LoopCI should use.
+
+```bash
+LOOPCI_JIRA_CREATE_ISSUES=true
+LOOPCI_JIRA_BASE_URL=https://your-company.atlassian.net
+LOOPCI_JIRA_EMAIL=loopci@example.com
+LOOPCI_JIRA_API_TOKEN=<jira-api-token>
+LOOPCI_JIRA_PROJECT_KEY=ENG
+LOOPCI_JIRA_ISSUE_TYPE=Bug
+```
+
+## 5. Add The GitHub Webhook
 
 In GitHub, open the target repo:
 
@@ -91,7 +104,7 @@ In GitHub, open the target repo:
 
 LoopCI only accepts signed `workflow_run` events whose conclusion is failed, timed out, cancelled, or action required.
 
-## 5. Verify
+## 6. Verify
 
 ```bash
 curl https://your-loopci-domain.example/health

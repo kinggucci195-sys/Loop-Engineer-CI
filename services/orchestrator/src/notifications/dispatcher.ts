@@ -8,6 +8,7 @@ import {
   type NotificationUser
 } from "./notification-config";
 import { sendEmailRepairPlanNotification } from "./email";
+import { createJiraRepairPlanIssue } from "./jira";
 import { sendSlackRepairPlanNotification } from "./slack";
 import { sendTeamsRepairPlanNotification } from "./teams";
 
@@ -57,7 +58,8 @@ export function createNotificationDispatcher(
       await Promise.all([
         notifyTeams(teamsWebhookUrl, plan, env, logger),
         notifySlack(slackWebhookUrl, plan, env, logger),
-        notifyEmail(target.emails, plan, env, logger)
+        notifyEmail(target.emails, plan, env, logger),
+        notifyJira(plan, env, logger)
       ]);
     }
   };
@@ -176,6 +178,29 @@ async function notifySlack(
     logger.error(
       { error, planId: plan.id },
       "Failed to send Slack notification"
+    );
+  }
+}
+
+async function notifyJira(plan: RepairPlan, env: LoopCiEnv, logger: Logger) {
+  if (!env.LOOPCI_JIRA_CREATE_ISSUES) {
+    logger.debug(
+      { planId: plan.id },
+      "Skipping Jira issue creation because Jira is disabled"
+    );
+    return;
+  }
+
+  try {
+    const issue = await createJiraRepairPlanIssue(plan, env);
+    logger.info(
+      { planId: plan.id, issueKey: issue.key },
+      "Created Jira issue for repair plan"
+    );
+  } catch (error) {
+    logger.error(
+      { error, planId: plan.id },
+      "Failed to create Jira issue for repair plan"
     );
   }
 }

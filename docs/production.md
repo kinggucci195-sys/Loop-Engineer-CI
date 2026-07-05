@@ -33,6 +33,7 @@ The root repository is for the full monorepo and Docker services. Keep Vercel da
 - `GITHUB_TOKEN`: reserved for future authenticated GitHub API actions.
 - `LOOPCI_TEAMS_WEBHOOK_URL`: optional Teams channel webhook for repair-plan alerts.
 - `LOOPCI_SLACK_WEBHOOK_URL`: optional Slack incoming webhook for repair-plan alerts.
+- `LOOPCI_JIRA_API_TOKEN`: optional Jira Cloud API token for creating repair-plan issues.
 - `LOOPCI_SMTP_PASSWORD`: optional SMTP or Gmail app password for email alerts.
 
 Never commit `.env`, raw CI logs, private keys, tokens, or generated evidence that contains secrets.
@@ -61,6 +62,21 @@ LoopCI can notify Slack, a Teams channel, and email recipients when a repair pla
 - Use Gmail SMTP, Google Workspace SMTP relay, or another SMTP provider for email delivery.
 
 The Slack, Teams, and email buttons open a confirmation URL. They do not merge code or deploy production changes directly.
+
+## Jira Issues
+
+LoopCI can create Jira issues when a repair plan is created. Jira issue creation is disabled by default so local demos and production installs do not create tickets unexpectedly.
+
+Required values:
+
+- `LOOPCI_JIRA_CREATE_ISSUES=true`
+- `LOOPCI_JIRA_BASE_URL=https://your-company.atlassian.net`
+- `LOOPCI_JIRA_EMAIL=loopci@example.com`
+- `LOOPCI_JIRA_API_TOKEN=<jira-api-token>`
+- `LOOPCI_JIRA_PROJECT_KEY=<project-key>`
+- `LOOPCI_JIRA_ISSUE_TYPE=Bug`
+
+The Jira issue contains the repository, branch, workflow, owner signal, risk, confidence, recommended checks, residual risk, diagnosis link, fix-request link, and GitHub run link.
 
 ## Safe Operating Mode
 

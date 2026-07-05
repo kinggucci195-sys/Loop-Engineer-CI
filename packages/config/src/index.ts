@@ -18,6 +18,15 @@ const envSchema = z.object({
   LOOPCI_NOTIFICATION_USERS_PATH: z.string().optional(),
   LOOPCI_TEAMS_WEBHOOK_URL: z.string().url().optional(),
   LOOPCI_SLACK_WEBHOOK_URL: z.string().url().optional(),
+  LOOPCI_JIRA_CREATE_ISSUES: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
+  LOOPCI_JIRA_BASE_URL: z.string().url().optional(),
+  LOOPCI_JIRA_EMAIL: z.string().email().optional(),
+  LOOPCI_JIRA_API_TOKEN: z.string().optional(),
+  LOOPCI_JIRA_PROJECT_KEY: z.string().optional(),
+  LOOPCI_JIRA_ISSUE_TYPE: z.string().default("Bug"),
   LOOPCI_EMAIL_FROM: z.string().email().optional(),
   LOOPCI_SMTP_HOST: z.string().optional(),
   LOOPCI_SMTP_PORT: z.coerce.number().int().positive().default(587),

@@ -49,6 +49,7 @@ Not the target user: a solo developer who only wants to paste one log into a cha
 - Slack repair cards.
 - Microsoft Teams repair cards.
 - SMTP and Gmail-compatible email notifications.
+- Jira issue creation for repair plans.
 - Actor-aware routing through `loopci.notifications.json`.
 - A dashboard for failed builds ranked by risk, owner, route, and review state.
 - A safe "Fix this error" confirmation route for low-risk repair work.
@@ -140,6 +141,7 @@ More setup docs:
 - [GitHub install guide](docs/install-github.md)
 - [Production runbook](docs/production.md)
 - [Security model](docs/security.md)
+- [Integrations guide](docs/integrations.md)
 - [Product positioning](docs/product-positioning.md)
 - [Product execution plan](docs/product-plan.md)
 
