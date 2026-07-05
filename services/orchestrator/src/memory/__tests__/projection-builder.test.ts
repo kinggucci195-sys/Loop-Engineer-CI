@@ -1,12 +1,16 @@
 import type {
+  CiFailureEvent,
+  FailureClassification,
   EngineeringMemoryEvent,
   FailureFingerprint
 } from "@loopci/contracts";
 import {
+  createFailureObservedEvent,
   createMemoryId,
   rebuildProjectionFromEvents,
   updateProjectionWithEvent
 } from "../projection-builder";
+import { createRepairPlan } from "../../domain/repair-plan";
 
 const fingerprint: FailureFingerprint = {
   id: "fp-unit",
@@ -36,6 +40,21 @@ function event(
     fingerprintId: fingerprint.id,
     fingerprintType: fingerprint.type,
     fingerprintVersion: fingerprint.version,
+    fingerprint: {
+      id: fingerprint.id,
+      type: fingerprint.type,
+      version: fingerprint.version,
+      signature: fingerprint.signature,
+      source: {
+        repository: fingerprint.repository,
+        workflow: fingerprint.workflow,
+        job: fingerprint.job,
+        step: fingerprint.step,
+        kind: fingerprint.kind,
+        normalizedSignature: fingerprint.normalizedSignature,
+        likelyFiles: fingerprint.likelyFiles
+      }
+    },
     correlationId: "ci-run:github-actions:kinggucci195-sys/loopci:ci:1001",
     actor: "gerald",
     planId,
@@ -58,6 +77,63 @@ function event(
 }
 
 describe("ProjectionBuilder", () => {
+  it("stores canonical fingerprint fields on observed failure events", () => {
+    const eventInput: CiFailureEvent = {
+      provider: "github-actions",
+      repository: fingerprint.repository,
+      workflow: fingerprint.workflow,
+      runId: "1001",
+      runUrl: "https://github.com/kinggucci195-sys/loopci/actions/runs/1001",
+      commitSha: "abcdef1",
+      branch: "main",
+      triggeringActor: "gerald",
+      failedJob: fingerprint.job,
+      failedStep: fingerprint.step,
+      logExcerpt: "Expected status 200"
+    };
+    const classification: FailureClassification = {
+      kind: fingerprint.kind,
+      risk: "medium",
+      confidence: 0.72,
+      summary: "Unit test failed.",
+      likelyFiles: fingerprint.likelyFiles,
+      recommendedChecks: ["npm test"],
+      requiresHuman: true,
+      rationale: "Detected assertion failure."
+    };
+
+    const observedEvent = createFailureObservedEvent(
+      createRepairPlan(eventInput, classification),
+      fingerprint,
+      {
+        owner: "gerald",
+        source: "triggering-actor"
+      },
+      "2026-07-05T00:00:00.000Z"
+    );
+
+    expect(observedEvent).toMatchObject({
+      actor: "gerald",
+      fingerprint: {
+        id: fingerprint.id,
+        type: "ci-failure",
+        version: 1,
+        source: {
+          repository: fingerprint.repository,
+          workflow: fingerprint.workflow,
+          job: fingerprint.job,
+          step: fingerprint.step,
+          kind: fingerprint.kind,
+          normalizedSignature: fingerprint.normalizedSignature,
+          likelyFiles: fingerprint.likelyFiles
+        }
+      },
+      metadata: {
+        ownershipSource: "triggering-actor"
+      }
+    });
+  });
+
   it("creates a projection from the first failure-observed event", () => {
     const projection = rebuildProjectionFromEvents(fingerprint, [
       event("event-1", "failure-observed", "2026-07-05T00:00:00.000Z")
@@ -66,6 +142,7 @@ describe("ProjectionBuilder", () => {
     expect(projection).toMatchObject({
       id: createMemoryId(fingerprint.id),
       fingerprintVersion: 1,
+      lifecycleState: "active",
       occurrenceCount: 1,
       firstSeenAt: "2026-07-05T00:00:00.000Z",
       lastSeenAt: "2026-07-05T00:00:00.000Z"

@@ -34,6 +34,10 @@ import {
   createNotificationDispatcher,
   type NotificationDispatcher
 } from "./notifications/dispatcher";
+import {
+  createFallbackOwnershipResolver,
+  type OwnershipResolver
+} from "./ownership/ownership-resolver";
 import { verifyGitHubWebhookSignature } from "./security/github-signature";
 import type { PlanStore } from "./state/plan-store";
 import { createCiFailureEventFromGitHubWebhook } from "./webhooks/github";
@@ -45,6 +49,7 @@ export interface ServerDependencies {
   policyProvider?: RepositoryPolicyProvider;
   notificationDispatcher?: NotificationDispatcher;
   memoryStore?: MemoryStore;
+  ownershipResolver?: OwnershipResolver;
 }
 
 export function buildServer(dependencies: ServerDependencies) {
@@ -62,6 +67,8 @@ export function buildServer(dependencies: ServerDependencies) {
       eventsPath: resolve(dependencies.env.STATE_DIR, "memory-events.jsonl"),
       recordsPath: resolve(dependencies.env.STATE_DIR, "memory.jsonl")
     });
+  const ownershipResolver =
+    dependencies.ownershipResolver ?? createFallbackOwnershipResolver();
 
   server.register(fastifyRawBody, {
     field: "rawBody",
@@ -365,7 +372,12 @@ export function buildServer(dependencies: ServerDependencies) {
     }
 
     const fingerprint = createFailureFingerprint(event, classification);
-    const failureObservedEvent = createFailureObservedEvent(plan, fingerprint);
+    const ownership = await ownershipResolver.resolve(event, classification);
+    const failureObservedEvent = createFailureObservedEvent(
+      plan,
+      fingerprint,
+      ownership
+    );
     const existingEvents = await memoryStore.listEventsByFingerprintId(
       fingerprint.id
     );

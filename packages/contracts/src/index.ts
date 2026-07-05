@@ -118,6 +118,10 @@ export const failureFingerprintSchema = fingerprintSchema.extend({
   likelyFiles: z.array(z.string()).default([])
 });
 
+export const fingerprintSnapshotSchema = fingerprintSchema.extend({
+  source: z.record(z.string(), z.unknown()).default({})
+});
+
 export const engineeringMemoryOutcomeSchema = z.enum([
   "unknown",
   "fix-requested",
@@ -132,6 +136,12 @@ export const engineeringMemoryEventTypeSchema = z.enum([
   "repair-succeeded",
   "repair-failed",
   "regression-detected"
+]);
+
+export const engineeringMemoryLifecycleStateSchema = z.enum([
+  "active",
+  "archived",
+  "superseded"
 ]);
 
 const nullableRelationshipSchema = z.string().min(1).nullable().optional();
@@ -157,6 +167,7 @@ export const engineeringMemoryEventSchema = z.object({
   fingerprintId: z.string().min(1),
   fingerprintType: fingerprintTypeSchema,
   fingerprintVersion: z.literal(1),
+  fingerprint: fingerprintSnapshotSchema,
   correlationId: z.string().min(1),
   causationId: z.string().min(1).optional(),
   actor: z.string().min(1).optional(),
@@ -182,6 +193,7 @@ export const engineeringMemoryRecordSchema = z.object({
   fingerprintId: z.string().min(1),
   fingerprintType: fingerprintTypeSchema,
   fingerprintVersion: z.literal(1),
+  lifecycleState: engineeringMemoryLifecycleStateSchema,
   firstSeenAt: z.string().datetime(),
   lastSeenAt: z.string().datetime(),
   relationships: engineeringMemoryRelationshipsSchema,
@@ -207,8 +219,12 @@ export const engineeringRecognitionSummarySchema = z.object({
 
 export type Fingerprint = z.infer<typeof fingerprintSchema>;
 export type FailureFingerprint = z.infer<typeof failureFingerprintSchema>;
+export type FingerprintSnapshot = z.infer<typeof fingerprintSnapshotSchema>;
 export type EngineeringMemoryOutcome = z.infer<
   typeof engineeringMemoryOutcomeSchema
+>;
+export type EngineeringMemoryLifecycleState = z.infer<
+  typeof engineeringMemoryLifecycleStateSchema
 >;
 export type EngineeringMemoryEventType = z.infer<
   typeof engineeringMemoryEventTypeSchema

@@ -7,20 +7,16 @@ import type {
   FailureFingerprint,
   RepairPlan
 } from "@loopci/contracts";
+import type { OwnershipResolution } from "../ownership/ownership-resolver";
 
 const RECENT_REPAIR_PLAN_LIMIT = 10;
 
 export function createFailureObservedEvent(
   plan: RepairPlan,
   fingerprint: FailureFingerprint,
+  ownership: OwnershipResolution,
   occurredAt = new Date().toISOString()
 ): EngineeringMemoryEvent {
-  const owner =
-    plan.event.triggeringActor ??
-    plan.event.actor ??
-    plan.event.commitAuthorEmail ??
-    undefined;
-
   return {
     version: 1,
     id: `memevt-${plan.id}-failure-observed`,
@@ -29,15 +25,30 @@ export function createFailureObservedEvent(
     fingerprintId: fingerprint.id,
     fingerprintType: fingerprint.type,
     fingerprintVersion: fingerprint.version,
+    fingerprint: {
+      id: fingerprint.id,
+      type: fingerprint.type,
+      version: fingerprint.version,
+      signature: fingerprint.signature,
+      source: {
+        repository: fingerprint.repository,
+        workflow: fingerprint.workflow,
+        job: fingerprint.job,
+        step: fingerprint.step,
+        kind: fingerprint.kind,
+        normalizedSignature: fingerprint.normalizedSignature,
+        likelyFiles: fingerprint.likelyFiles
+      }
+    },
     correlationId: createCiRunCorrelationId(plan),
-    actor: owner,
+    actor: ownership.owner,
     planId: plan.id,
     occurredAt,
     relationships: {
       repository: plan.event.repository,
       workflow: plan.event.workflow,
       commitSha: plan.event.commitSha,
-      owner,
+      owner: ownership.owner,
       files: fingerprint.likelyFiles,
       repairPlanIds: [plan.id]
     },
@@ -48,6 +59,7 @@ export function createFailureObservedEvent(
       fingerprintSignature: fingerprint.signature,
       fingerprintNormalizedSignature: fingerprint.normalizedSignature,
       kind: plan.classification.kind,
+      ownershipSource: ownership.source,
       risk: plan.classification.risk
     }
   };
@@ -89,6 +101,7 @@ export function rebuildProjectionFromEvents(
     fingerprintId: fingerprint.id,
     fingerprintType: fingerprint.type,
     fingerprintVersion: fingerprint.version,
+    lifecycleState: "active",
     firstSeenAt: firstEvent.occurredAt,
     lastSeenAt: lastEvent.occurredAt,
     relationships,

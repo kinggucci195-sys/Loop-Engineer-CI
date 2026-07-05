@@ -15,6 +15,21 @@ const event: EngineeringMemoryEvent = {
   fingerprintId: "fp-1",
   fingerprintType: "ci-failure",
   fingerprintVersion: 1,
+  fingerprint: {
+    id: "fp-1",
+    type: "ci-failure",
+    version: 1,
+    signature: "repo|ci|validate|npm run lint|lint|eslint no-console",
+    source: {
+      repository: "kinggucci195-sys/loopci",
+      workflow: "ci",
+      job: "validate",
+      step: "npm run lint",
+      kind: "lint",
+      normalizedSignature: "eslint no-console",
+      likelyFiles: ["src/index.ts"]
+    }
+  },
   correlationId: "ci-run:github-actions:kinggucci195-sys/loopci:ci:1001",
   actor: "gerald",
   planId: "plan-1",
@@ -36,6 +51,7 @@ const record: EngineeringMemoryRecord = {
   fingerprintId: "fp-1",
   fingerprintType: "ci-failure",
   fingerprintVersion: 1,
+  lifecycleState: "active",
   firstSeenAt: "2026-07-05T00:00:00.000Z",
   lastSeenAt: "2026-07-05T00:00:00.000Z",
   relationships: {

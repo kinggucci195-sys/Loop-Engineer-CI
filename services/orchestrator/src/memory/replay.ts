@@ -8,12 +8,21 @@ import { rebuildProjectionFromEvents } from "./projection-builder";
 
 type ProjectionFingerprint = Pick<Fingerprint, "id" | "type" | "version">;
 
+export interface MemoryReplayFilter {
+  fingerprintId?: string;
+  fingerprintType?: Fingerprint["type"];
+  repository?: string;
+  occurredAtFrom?: string;
+  occurredAtTo?: string;
+}
+
 export function rebuildMemoryProjections(
-  events: EngineeringMemoryEvent[]
+  events: EngineeringMemoryEvent[],
+  filter: MemoryReplayFilter = {}
 ): EngineeringMemoryRecord[] {
   const grouped = new Map<string, EngineeringMemoryEvent[]>();
 
-  for (const event of events) {
+  for (const event of filterReplayEvents(events, filter)) {
     const groupKey = [
       event.fingerprintType,
       event.fingerprintVersion,
@@ -32,9 +41,9 @@ export function rebuildMemoryProjections(
     }
 
     const fingerprint: ProjectionFingerprint = {
-      id: firstEvent.fingerprintId,
-      type: firstEvent.fingerprintType,
-      version: firstEvent.fingerprintVersion
+      id: firstEvent.fingerprint.id,
+      type: firstEvent.fingerprint.type,
+      version: firstEvent.fingerprint.version
     };
 
     return rebuildProjectionFromEvents(fingerprint, group);
@@ -42,10 +51,53 @@ export function rebuildMemoryProjections(
 }
 
 export async function replayMemoryProjections(
-  store: MemoryStore
+  store: MemoryStore,
+  filter: MemoryReplayFilter = {}
 ): Promise<EngineeringMemoryRecord[]> {
-  const records = rebuildMemoryProjections(await store.listEvents());
-  await store.replaceProjections(records);
+  const records = rebuildMemoryProjections(await store.listEvents(), filter);
+
+  if (Object.keys(filter).length === 0) {
+    await store.replaceProjections(records);
+  } else {
+    for (const record of records) {
+      await store.writeProjection(record);
+    }
+  }
 
   return records;
+}
+
+function filterReplayEvents(
+  events: EngineeringMemoryEvent[],
+  filter: MemoryReplayFilter
+): EngineeringMemoryEvent[] {
+  return events.filter((event) => {
+    if (filter.fingerprintId && event.fingerprintId !== filter.fingerprintId) {
+      return false;
+    }
+
+    if (
+      filter.fingerprintType &&
+      event.fingerprintType !== filter.fingerprintType
+    ) {
+      return false;
+    }
+
+    if (
+      filter.repository &&
+      event.relationships.repository !== filter.repository
+    ) {
+      return false;
+    }
+
+    if (filter.occurredAtFrom && event.occurredAt < filter.occurredAtFrom) {
+      return false;
+    }
+
+    if (filter.occurredAtTo && event.occurredAt > filter.occurredAtTo) {
+      return false;
+    }
+
+    return true;
+  });
 }

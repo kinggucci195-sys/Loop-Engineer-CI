@@ -11,6 +11,7 @@ const record: EngineeringMemoryRecord = {
   fingerprintId: "fp-1",
   fingerprintType: "ci-failure",
   fingerprintVersion: 1,
+  lifecycleState: "active",
   firstSeenAt: new Date().toISOString(),
   lastSeenAt: new Date().toISOString(),
   relationships: {
@@ -36,6 +37,21 @@ function event(
     fingerprintId: record.fingerprintId,
     fingerprintType: record.fingerprintType,
     fingerprintVersion: record.fingerprintVersion,
+    fingerprint: {
+      id: record.fingerprintId,
+      type: record.fingerprintType,
+      version: record.fingerprintVersion,
+      signature: "repo|ci|validate|npm test|unit-test|expected 200",
+      source: {
+        repository: "kinggucci195-sys/loopci",
+        workflow: "ci",
+        job: "validate",
+        step: "npm test",
+        kind: "unit-test",
+        normalizedSignature: "expected 200",
+        likelyFiles: ["src/index.ts"]
+      }
+    },
     correlationId: "ci-run:github-actions:kinggucci195-sys/loopci:ci:1001",
     actor: "gerald",
     planId,

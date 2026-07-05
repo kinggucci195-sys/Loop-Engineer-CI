@@ -3,6 +3,7 @@ import type {
   EngineeringMemoryRecord,
   EngineeringRecognitionSummary
 } from "@loopci/contracts";
+import { scoreEngineeringRecognitionConfidence } from "./confidence-engine";
 
 export function recognizeEngineeringMemory(
   record: EngineeringMemoryRecord,
@@ -23,7 +24,7 @@ export function recognizeEngineeringMemory(
   const lastSuccessfulRepairPlanId =
     repairSucceededEvents[repairSucceededEvents.length - 1]?.planId ??
     record.lastSuccessfulRepairPlanId;
-  const confidenceParts = deriveConfidence({
+  const confidence = scoreEngineeringRecognitionConfidence({
     occurrenceCount,
     lastSeenAt: record.lastSeenAt,
     successfulRepairCount: repairSucceededEvents.length,
@@ -38,57 +39,7 @@ export function recognizeEngineeringMemory(
     previousRepairCount: record.previousRepairCount,
     lastSuccessfulRepairPlanId,
     likelyPriorFixer: record.relationships.owner ?? undefined,
-    confidence: confidenceParts.confidence,
-    confidenceReasoning: confidenceParts.reasoning
+    confidence: confidence.confidence,
+    confidenceReasoning: confidence.confidenceReasoning
   };
-}
-
-function deriveConfidence(input: {
-  occurrenceCount: number;
-  lastSeenAt: string;
-  successfulRepairCount: number;
-  failedOutcomeCount: number;
-}): { confidence: number; reasoning: string[] } {
-  let confidence = 0.25;
-  const reasoning: string[] = [];
-
-  if (input.occurrenceCount > 1) {
-    confidence += 0.2;
-    reasoning.push(`Seen ${input.occurrenceCount} times`);
-  } else {
-    reasoning.push("First observed occurrence");
-  }
-
-  if (input.occurrenceCount >= 3) {
-    confidence += 0.15;
-    reasoning.push("Recurring exact fingerprint");
-  }
-
-  if (input.successfulRepairCount > 0) {
-    confidence += 0.2;
-    reasoning.push("Previous repair succeeded");
-  }
-
-  if (isRecent(input.lastSeenAt)) {
-    confidence += 0.1;
-    reasoning.push("Recent occurrence");
-  } else {
-    reasoning.push("Last occurrence is not recent");
-  }
-
-  if (input.failedOutcomeCount > 0) {
-    confidence -= 0.2;
-    reasoning.push("Failed repair or regression exists");
-  }
-
-  return {
-    confidence: Math.max(0, Math.min(1, Number(confidence.toFixed(2)))),
-    reasoning
-  };
-}
-
-function isRecent(isoDate: string): boolean {
-  const ageMs = Date.now() - Date.parse(isoDate);
-  const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
-  return Number.isFinite(ageMs) && ageMs <= thirtyDaysMs;
 }

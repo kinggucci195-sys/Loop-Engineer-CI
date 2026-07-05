@@ -16,6 +16,7 @@ CI Event
 -> ProjectionBuilder
 -> EngineeringMemoryRecord
 -> RecognitionEngine
+-> ConfidenceEngine
 -> RepairPlanner
 -> Notification Layer
 ```
@@ -49,10 +50,13 @@ Recognition is not stored as an event because it is derived analysis. If the rec
 
 Each event includes:
 
+- canonical `fingerprint`
 - `fingerprintVersion`
 - `correlationId`
 - optional `causationId`
 - optional `actor`
+
+The top-level fingerprint id/type/version are retained for indexing. The `fingerprint` snapshot preserves the canonical source fields used to derive the id, so replay and future migrations do not depend on reconstructing old normalization inputs from unrelated payloads.
 
 ### ProjectionBuilder
 
@@ -65,6 +69,7 @@ Each event includes:
 - relationships
 - outcome summary
 - last successful repair plan id
+- lifecycle state
 
 The projection can be rebuilt later if JSONL storage is replaced by a database.
 
@@ -76,6 +81,26 @@ npm run memory:replay --workspace @loopci/orchestrator
 ```
 
 Replay reads `memory-events.jsonl`, rebuilds projections, and replaces `memory.jsonl`.
+
+Replay can also target partitions:
+
+```bash
+npm run memory:replay --workspace @loopci/orchestrator -- --repository=owner/repo
+npm run memory:replay --workspace @loopci/orchestrator -- --fingerprint-id=fp-id
+npm run memory:replay --workspace @loopci/orchestrator -- --from=2026-07-01T00:00:00.000Z --to=2026-07-31T23:59:59.999Z
+```
+
+Partitioned replay updates matching projections without replacing unrelated records.
+
+### Lifecycle
+
+`EngineeringMemoryRecord` has a lifecycle state:
+
+- `active`
+- `archived`
+- `superseded`
+
+v1 creates active records. Archived repositories, renamed repositories, deleted workflows, and future fingerprint migrations should move records out of the active set instead of deleting history.
 
 ### Fingerprints
 
@@ -95,7 +120,20 @@ Normalization removes noisy timestamps, URLs, SHAs, run ids, and unstable line o
 
 Fingerprints are versioned with `version: 1`. Future normalization changes can introduce a new fingerprint version without corrupting historical recognition.
 
+Old events remain on their original fingerprint version. A future migration can write new facts or mark old projections `superseded`, but replay must never silently recalculate old fingerprint ids with a newer algorithm.
+
 Future fingerprint types can represent deployments, incidents, pull requests, reviews, rollbacks, or approvals without changing the memory engine contract.
+
+### Ownership
+
+Ownership is resolved through an `OwnershipResolver` interface. v1 uses a fallback resolver:
+
+1. triggering actor
+2. actor
+3. commit author email
+4. unknown
+
+Future resolvers can add CODEOWNERS, git blame, team ownership, service catalogs, or manual overrides without changing memory events or projection logic.
 
 ### RecognitionEngine
 
@@ -109,9 +147,11 @@ It performs no file IO and knows nothing about JSONL storage. That keeps recogni
 
 v1 recognition uses `recognitionType: exact-fingerprint`.
 
-## Confidence
+### ConfidenceEngine
 
-Recognition confidence is derived, not invented. The score considers:
+Confidence is separated from recognition facts. `RecognitionEngine` derives facts such as seen-before, occurrence count, last successful repair, and likely prior fixer. `ConfidenceEngine` scores how much LoopCI should trust those facts for the current response.
+
+Confidence is derived, not invented. The score considers:
 
 - exact repeated occurrences
 - whether the failure is recurring
