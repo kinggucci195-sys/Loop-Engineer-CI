@@ -5,7 +5,7 @@ LoopCI connects to tools in two directions:
 1. Inbound CI events from GitHub Actions.
 2. Outbound repair-plan delivery to Slack, Microsoft Teams, email, and Jira.
 
-The current implementation favors boring, reliable integrations: signed GitHub webhooks in, channel webhooks and REST APIs out.
+LoopCI favors boring, reliable integrations: signed GitHub webhooks in, channel webhooks and REST APIs out.
 
 ## GitHub Actions
 
@@ -74,7 +74,7 @@ Per-user or per-team Teams route:
 }
 ```
 
-Direct Teams DMs require a Teams bot and user ID mapping. The current implementation intentionally starts with channel cards.
+Direct Teams DMs require a Teams bot and user ID mapping. LoopCI intentionally starts with channel cards.
 
 ## Email
 

@@ -1,38 +1,72 @@
 # LoopCI
 
+When CI breaks, LoopCI already knows who should fix it.
+
 Every failed CI build costs engineering time.
 
-LoopCI turns failed GitHub Actions runs into owned repair plans with evidence, risk analysis, and human-approved next steps.
+LoopCI turns failed GitHub Actions runs into evidence-backed repair plans assigned to the likely owner.
 
-Instead of digging through logs, your team receives exactly what failed, why it failed, who owns it, and what to do next.
+Instead of searching logs, GitHub Actions pages, and chat history, your team receives exactly what failed, why it failed, who owns it, and what to do next.
 
 We're not another chatbot for CI logs. We coordinate the response.
 
-AI never merges code without approval.
+Every code change stays behind human approval.
 
 ![LoopCI dashboard showing failed builds ranked by owner, risk, route, and next action](docs/assets/loopci-dashboard.png)
-
-## How It Works
-
-```text
-CI fails
--> LoopCI receives the signed GitHub webhook
--> LoopCI analyzes the failure
--> LoopCI identifies the likely owner or fallback channel
--> LoopCI builds an evidence-backed repair plan
--> LoopCI notifies the right engineer in Slack, Teams, or email
--> Humans approve risky changes
-```
 
 LoopCI should be evaluated against engineering incident tools, not coding assistants.
 
 GitHub Copilot, Cursor, Claude Code, and ChatGPT help an individual reason about code. LoopCI helps a team operationalize the response to broken builds.
 
+## Why LoopCI Exists
+
+Every engineering team eventually asks the same questions after a failed build:
+
+- Who owns this?
+- Is it safe to fix automatically?
+- Is this flaky or real?
+- Has this happened before?
+- What evidence should I review?
+
+LoopCI answers those questions automatically.
+
+Slack, Teams, email, Jira, and GitHub Actions are not the moat by themselves. They are the delivery layer. The product value is the loop around them:
+
+- Policy decides what is safe.
+- Ownership decides who sees it.
+- Evidence decides whether a fix is reviewable.
+- History decides whether this is a repeated failure.
+- Human approval decides whether code changes.
+
+## Why Not Just GitHub Actions?
+
+| GitHub Actions                      | LoopCI                                                 |
+| ----------------------------------- | ------------------------------------------------------ |
+| Reports that a workflow failed      | Explains why it likely failed                          |
+| Sends generic failure notifications | Routes the repair plan to the likely owner             |
+| Shows raw logs                      | Produces an evidence-backed repair plan                |
+| Has no risk evaluation              | Separates low-risk fixes from review-gated failures    |
+| Leaves coordination to people       | Sends Slack, Teams, email, Jira, and dashboard updates |
+
+GitHub Actions detects failures. OpenAI can analyze text. Slack delivers messages. LoopCI owns the operational workflow between them: who should respond, what evidence is required, what policy applies, whether the failure is safe to repair, and whether the repair must stay behind human review.
+
+## How It Works
+
+```text
+CI fails
+-> Webhook received
+-> Failure classified
+-> Owner identified
+-> Repair plan generated
+-> Engineer notified
+-> Humans approve risky changes
+```
+
 ## Who It Is For
 
 LoopCI is for engineering teams that use GitHub Actions and lose time when builds fail without a clear owner or safe next step.
 
-Best early users:
+Ideal for:
 
 - Platform and DevOps teams responsible for build health.
 - Engineering managers who need failed builds assigned and tracked.
@@ -43,16 +77,27 @@ Not the target user: a solo developer who only wants to paste one log into a cha
 
 ## Today LoopCI Supports
 
+Integrations:
+
 - GitHub Actions failure webhooks.
-- Repository and branch policy enforcement.
-- Repair plans with summary, likely owner, risk, confidence, evidence, and next action.
 - Slack repair cards.
 - Microsoft Teams repair cards.
 - SMTP and Gmail-compatible email notifications.
 - Jira issue creation for repair plans.
+
+Workflow:
+
+- Repository and branch policy enforcement.
+- Repair plans with summary, likely owner, risk, confidence, evidence, and next action.
 - Actor-aware routing through `loopci.notifications.json`.
-- A dashboard for failed builds ranked by risk, owner, route, and review state.
 - A safe "Fix this error" confirmation route for low-risk repair work.
+
+Dashboard:
+
+- Failed build queue.
+- Risk and review state.
+- Owner and route visibility.
+- Evidence tracking.
 
 ## What LoopCI Sends
 
@@ -69,7 +114,7 @@ Each repair card answers the questions engineers ask first:
 
 LoopCI does not treat every failure as an AI free-for-all.
 
-The current decision path is:
+The decision path is:
 
 1. Verify the GitHub webhook signature.
 2. Normalize the workflow failure into a CI event.
@@ -83,7 +128,7 @@ Optional OpenAI classification can be enabled, but policy and deterministic chec
 
 ## Trust Model
 
-- No auto-merge in the MVP.
+- Every code change stays behind human approval.
 - No production deploy authority.
 - No production secrets in patch sandboxes.
 - CI workflow edits require stricter human review.
@@ -94,8 +139,30 @@ Optional OpenAI classification can be enabled, but policy and deterministic chec
 
 - GitHub PR comments with root cause, confidence, evidence, and suggested next action.
 - GitHub App authentication for richer run context and draft repair branches.
-- Jira issue creation from repair plans.
+- Jira deduplication so repeated failures update an existing issue.
 - Historical failure memory for repeated failures and flaky tests.
+
+## Architecture
+
+```mermaid
+flowchart TD
+  github["GitHub Actions"] --> webhook["Signed Webhook"]
+  webhook --> orchestrator["LoopCI Orchestrator"]
+  orchestrator --> policy["Policy Engine"]
+  orchestrator --> classifier["Classification"]
+  policy --> plan["Repair Plan"]
+  classifier --> plan
+  plan --> slack["Slack"]
+  plan --> teams["Teams"]
+  plan --> email["Email"]
+  plan --> jira["Jira"]
+  plan --> dashboard["Dashboard"]
+  dashboard --> engineer["Engineer Review"]
+  slack --> engineer
+  teams --> engineer
+  email --> engineer
+  jira --> engineer
+```
 
 ## Local Development
 

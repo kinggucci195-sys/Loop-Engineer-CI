@@ -37,6 +37,20 @@ LoopCI runs the response process:
 
 That makes LoopCI operational software, not just a prompt.
 
+## Why It Is Different From GitHub Actions
+
+GitHub Actions detects failures. LoopCI owns the operational workflow after the failure.
+
+| GitHub Actions                      | LoopCI                                                 |
+| ----------------------------------- | ------------------------------------------------------ |
+| Reports that a workflow failed      | Explains why it likely failed                          |
+| Sends generic failure notifications | Routes the repair plan to the likely owner             |
+| Shows raw logs                      | Produces an evidence-backed repair plan                |
+| Has no risk evaluation              | Separates low-risk fixes from review-gated failures    |
+| Leaves coordination to people       | Sends Slack, Teams, email, Jira, and dashboard updates |
+
+The moat is not a single AI summary. It is policy, classification, ownership, evidence, routing, history, and human review working together as one loop.
+
 ## Ideal Customer Profile
 
 Best early customers:
