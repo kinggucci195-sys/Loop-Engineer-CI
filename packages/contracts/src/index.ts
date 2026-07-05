@@ -96,3 +96,126 @@ export const evidenceBundleSchema = z.object({
 });
 
 export type EvidenceBundle = z.infer<typeof evidenceBundleSchema>;
+
+export const fingerprintTypeSchema = z.enum(["ci-failure"]);
+
+export const fingerprintSchema = z.object({
+  id: z.string().min(1),
+  type: fingerprintTypeSchema,
+  signature: z.string().min(1)
+});
+
+export const failureFingerprintSchema = fingerprintSchema.extend({
+  type: z.literal("ci-failure"),
+  repository: z.string().min(1),
+  workflow: z.string().min(1),
+  job: z.string().min(1),
+  step: z.string().min(1),
+  kind: failureKindSchema,
+  normalizedSignature: z.string().min(1),
+  likelyFiles: z.array(z.string()).default([])
+});
+
+export const engineeringMemoryOutcomeSchema = z.enum([
+  "unknown",
+  "fix-requested",
+  "verified-fix",
+  "failed-repair",
+  "regressed"
+]);
+
+export const engineeringMemoryEventTypeSchema = z.enum([
+  "failure-observed",
+  "repair-requested",
+  "repair-succeeded",
+  "repair-failed",
+  "regression-detected",
+  "recognition-generated"
+]);
+
+const nullableRelationshipSchema = z.string().min(1).nullable().optional();
+
+export const engineeringMemoryRelationshipsSchema = z.object({
+  repository: nullableRelationshipSchema,
+  workflow: nullableRelationshipSchema,
+  commitSha: z.string().min(6).nullable().optional(),
+  pullRequest: nullableRelationshipSchema,
+  ticket: nullableRelationshipSchema,
+  deployment: nullableRelationshipSchema,
+  incident: nullableRelationshipSchema,
+  owner: nullableRelationshipSchema,
+  files: z.array(z.string()).default([]),
+  repairPlanIds: z.array(z.string()).default([])
+});
+
+export const engineeringMemoryEventSchema = z.object({
+  version: z.literal(1),
+  id: z.string().min(1),
+  type: engineeringMemoryEventTypeSchema,
+  memoryId: z.string().min(1),
+  fingerprintId: z.string().min(1),
+  fingerprintType: fingerprintTypeSchema,
+  planId: z.string().min(1).optional(),
+  occurredAt: z.string().datetime(),
+  relationships: engineeringMemoryRelationshipsSchema.default({}),
+  outcome: engineeringMemoryOutcomeSchema.optional(),
+  metadata: z.record(z.string(), z.unknown()).default({})
+});
+
+/**
+ * EngineeringMemoryRecord is a rebuildable projection.
+ * EngineeringMemoryEvent is the source of truth.
+ *
+ * v1 stores CI failures.
+ * Future versions may store deployments, pull requests, incidents,
+ * reviews, rollbacks, approvals, and repair outcomes.
+ */
+export const engineeringMemoryRecordSchema = z.object({
+  schemaVersion: z.literal(1),
+  id: z.string().min(1),
+  recordType: z.literal("ci-failure"),
+  fingerprintId: z.string().min(1),
+  fingerprintType: fingerprintTypeSchema,
+  firstSeenAt: z.string().datetime(),
+  lastSeenAt: z.string().datetime(),
+  relationships: engineeringMemoryRelationshipsSchema,
+  outcomes: z.array(engineeringMemoryOutcomeSchema).default([]),
+  occurrenceCount: z.number().int().nonnegative(),
+  previousRepairCount: z.number().int().nonnegative().default(0),
+  lastSuccessfulRepairPlanId: z.string().min(1).optional()
+});
+
+export const engineeringRecognitionTypeSchema = z.enum(["exact-fingerprint"]);
+
+export const engineeringRecognitionSummarySchema = z.object({
+  seenBefore: z.boolean(),
+  recurring: z.boolean(),
+  recognitionType: engineeringRecognitionTypeSchema,
+  occurrenceCount: z.number().int().nonnegative(),
+  previousRepairCount: z.number().int().nonnegative(),
+  lastSuccessfulRepairPlanId: z.string().min(1).optional(),
+  likelyPriorFixer: z.string().min(1).optional(),
+  confidence: z.number().min(0).max(1),
+  confidenceReasoning: z.array(z.string()).default([])
+});
+
+export type Fingerprint = z.infer<typeof fingerprintSchema>;
+export type FailureFingerprint = z.infer<typeof failureFingerprintSchema>;
+export type EngineeringMemoryOutcome = z.infer<
+  typeof engineeringMemoryOutcomeSchema
+>;
+export type EngineeringMemoryEventType = z.infer<
+  typeof engineeringMemoryEventTypeSchema
+>;
+export type EngineeringMemoryRelationships = z.infer<
+  typeof engineeringMemoryRelationshipsSchema
+>;
+export type EngineeringMemoryEvent = z.infer<
+  typeof engineeringMemoryEventSchema
+>;
+export type EngineeringMemoryRecord = z.infer<
+  typeof engineeringMemoryRecordSchema
+>;
+export type EngineeringRecognitionSummary = z.infer<
+  typeof engineeringRecognitionSummarySchema
+>;

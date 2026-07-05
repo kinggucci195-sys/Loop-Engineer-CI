@@ -15,6 +15,10 @@ const envSchema = z.object({
     .enum(["true", "false"])
     .default("true")
     .transform((value) => value === "true"),
+  LOOPCI_MEMORY_ENABLED: z
+    .enum(["true", "false"])
+    .default("true")
+    .transform((value) => value === "true"),
   LOOPCI_NOTIFICATION_USERS_PATH: z.string().optional(),
   LOOPCI_TEAMS_WEBHOOK_URL: z.string().url().optional(),
   LOOPCI_SLACK_WEBHOOK_URL: z.string().url().optional(),

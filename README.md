@@ -34,6 +34,7 @@ CI fails
 -> Event normalized
 -> Policy applied
 -> Failure classified
+-> Memory checked for prior fixes
 -> Owner identified
 -> Repair plan generated
 -> Notification routed
@@ -72,7 +73,9 @@ flowchart TD
   webhook --> normalize["Normalize Event"]
   normalize --> policy["Policy Engine"]
   policy --> classifier["Classifier"]
-  classifier --> plan["Repair Plan"]
+  classifier --> memory["Engineering Memory"]
+  memory --> recognition["Seen-Before Recognition"]
+  recognition --> plan["Repair Plan"]
   plan --> router["Notification Router"]
   router --> slack["Slack"]
   router --> teams["Teams"]
@@ -100,6 +103,7 @@ Workflow:
 
 - Repository and branch policy enforcement.
 - Deterministic failure classification with optional OpenAI classification.
+- Engineering Memory Engine v1 with exact "seen before" recognition.
 - Repair plans with likely owner, risk, confidence, evidence, and next action.
 - Actor-aware routing through `loopci.notifications.json`.
 - Safe "Fix this error" confirmation route for low-risk repair work.
@@ -139,6 +143,7 @@ docker compose up --build
 
 - [Product positioning](docs/product-positioning.md)
 - [Product execution plan](docs/product-plan.md)
+- [Engineering Memory Engine](docs/engineering-memory.md)
 - [GitHub install guide](docs/install-github.md)
 - [Integrations guide](docs/integrations.md)
 - [Production runbook](docs/production.md)

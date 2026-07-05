@@ -1,12 +1,29 @@
 import Fastify from "fastify";
 import type { FastifyReply } from "fastify";
 import fastifyRawBody from "fastify-raw-body";
+import { resolve } from "node:path";
 import { ciFailureEventSchema } from "@loopci/contracts";
-import type { CiFailureEvent } from "@loopci/contracts";
+import type {
+  CiFailureEvent,
+  FailureClassification,
+  RepairPlan,
+  EngineeringRecognitionSummary
+} from "@loopci/contracts";
 import type { LoopCiEnv } from "@loopci/config";
 import { createLogger } from "@loopci/logger";
 import type { FailureClassifier } from "./ai/classifier";
 import { createRepairPlan } from "./domain/repair-plan";
+import { createFailureFingerprint } from "./memory/fingerprint";
+import {
+  createJsonlMemoryStore,
+  type MemoryStore
+} from "./memory/memory-store";
+import {
+  createFailureObservedEvent,
+  createRecognitionGeneratedEvent,
+  updateProjectionWithEvent
+} from "./memory/projection-builder";
+import { recognizeEngineeringMemory } from "./memory/recognition-engine";
 import {
   applyLogLimit,
   createFileRepositoryPolicyProvider,
@@ -28,6 +45,7 @@ export interface ServerDependencies {
   planStore: PlanStore;
   policyProvider?: RepositoryPolicyProvider;
   notificationDispatcher?: NotificationDispatcher;
+  memoryStore?: MemoryStore;
 }
 
 export function buildServer(dependencies: ServerDependencies) {
@@ -39,6 +57,12 @@ export function buildServer(dependencies: ServerDependencies) {
   const notificationDispatcher =
     dependencies.notificationDispatcher ??
     createNotificationDispatcher(dependencies.env, logger);
+  const memoryStore =
+    dependencies.memoryStore ??
+    createJsonlMemoryStore({
+      eventsPath: resolve(dependencies.env.STATE_DIR, "memory-events.jsonl"),
+      recordsPath: resolve(dependencies.env.STATE_DIR, "memory.jsonl")
+    });
 
   server.register(fastifyRawBody, {
     field: "rawBody",
@@ -80,6 +104,46 @@ export function buildServer(dependencies: ServerDependencies) {
     server.get("/plans", async () => ({
       plans: await dependencies.planStore.list()
     }));
+
+    server.get("/memory", async () => {
+      const records = await memoryStore.listRecords();
+      const recordsWithRecognition = await Promise.all(
+        records.map(async (record) => {
+          const events = await memoryStore.listEventsByMemoryId(record.id);
+
+          return {
+            record,
+            recognition: recognizeEngineeringMemory(record, events)
+          };
+        })
+      );
+
+      return {
+        records: recordsWithRecognition
+      };
+    });
+
+    server.get("/memory/:id", async (request, reply) => {
+      const { id } = request.params as { id: string };
+      const record = await memoryStore.getRecord(id);
+
+      if (!record) {
+        return reply.code(404).send({
+          found: false,
+          reason: "memory-not-found",
+          id
+        });
+      }
+
+      const events = await memoryStore.listEventsByMemoryId(record.id);
+
+      return {
+        found: true,
+        record,
+        events,
+        recognition: recognizeEngineeringMemory(record, events)
+      };
+    });
 
     server.get("/plans/:planId", async (request, reply) => {
       const { planId } = request.params as { planId: string };
@@ -249,6 +313,11 @@ export function buildServer(dependencies: ServerDependencies) {
       policy
     );
     const plan = createRepairPlan(policyEvent, classification);
+    const recognition = await recordEngineeringMemory(
+      policyEvent,
+      classification,
+      plan
+    );
 
     await dependencies.planStore.append(plan);
     await notificationDispatcher.notifyRepairPlan(plan);
@@ -258,7 +327,8 @@ export function buildServer(dependencies: ServerDependencies) {
         planId: plan.id,
         repository: policyEvent.repository,
         kind: classification.kind,
-        risk: classification.risk
+        risk: classification.risk,
+        recognition
       },
       "Created repair plan"
     );
@@ -270,8 +340,44 @@ export function buildServer(dependencies: ServerDependencies) {
         autoCreateIssue: policy.autoCreateIssue,
         autoCommentOnPr: policy.autoCommentOnPr,
         humanReviewRequired: classification.requiresHuman
-      }
+      },
+      recognition
     });
+  }
+
+  async function recordEngineeringMemory(
+    event: CiFailureEvent,
+    classification: FailureClassification,
+    plan: RepairPlan
+  ): Promise<EngineeringRecognitionSummary | null> {
+    if (!dependencies.env.LOOPCI_MEMORY_ENABLED) {
+      return null;
+    }
+
+    const fingerprint = createFailureFingerprint(event, classification);
+    const failureObservedEvent = createFailureObservedEvent(plan, fingerprint);
+    const existingEvents = await memoryStore.listEventsByFingerprintId(
+      fingerprint.id
+    );
+
+    await memoryStore.appendEvent(failureObservedEvent);
+
+    const projection = updateProjectionWithEvent(
+      fingerprint,
+      existingEvents,
+      failureObservedEvent
+    );
+    await memoryStore.writeProjection(projection);
+
+    const recognition = recognizeEngineeringMemory(projection, [
+      ...existingEvents,
+      failureObservedEvent
+    ]);
+    await memoryStore.appendEvent(
+      createRecognitionGeneratedEvent(plan, fingerprint, recognition.confidence)
+    );
+
+    return recognition;
   }
 
   async function findPlan(planId: string) {

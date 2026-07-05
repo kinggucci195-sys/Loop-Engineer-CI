@@ -1,7 +1,12 @@
 import {
   ciFailureEventSchema,
   classificationSchema,
+  engineeringMemoryEventSchema,
+  engineeringMemoryRecordSchema,
+  engineeringRecognitionSummarySchema,
   evidenceBundleSchema,
+  failureFingerprintSchema,
+  fingerprintSchema,
   repairPlanSchema
 } from "../index";
 
@@ -91,5 +96,114 @@ describe("LoopCI contracts", () => {
     });
 
     expect(bundle.commandsToRun).toContain("npm run lint");
+  });
+
+  it("validates fingerprints and failure fingerprints", () => {
+    const fingerprint = fingerprintSchema.parse({
+      id: "fp-123",
+      type: "ci-failure",
+      signature: "repo|ci|test|npm test|unit-test|expected 200"
+    });
+
+    const failureFingerprint = failureFingerprintSchema.parse({
+      ...fingerprint,
+      repository: "kinggucci195-sys/loopci",
+      workflow: "ci",
+      job: "validate",
+      step: "npm test",
+      kind: "unit-test",
+      normalizedSignature: "expected 200",
+      likelyFiles: ["src/example.ts"]
+    });
+
+    expect(failureFingerprint.type).toBe("ci-failure");
+  });
+
+  it("validates memory events and requires the event version", () => {
+    const event = {
+      version: 1,
+      id: "memevt-1",
+      type: "failure-observed",
+      memoryId: "memory-fp-123",
+      fingerprintId: "fp-123",
+      fingerprintType: "ci-failure",
+      planId: "plan-1",
+      occurredAt: new Date().toISOString(),
+      relationships: {
+        repository: "kinggucci195-sys/loopci",
+        workflow: "ci",
+        pullRequest: null,
+        ticket: null,
+        files: ["src/example.ts"],
+        repairPlanIds: ["plan-1"]
+      },
+      outcome: "unknown"
+    };
+
+    expect(engineeringMemoryEventSchema.parse(event).version).toBe(1);
+    expect(() =>
+      engineeringMemoryEventSchema.parse({ ...event, version: undefined })
+    ).toThrow();
+    expect(() =>
+      engineeringMemoryEventSchema.parse({ ...event, type: "made-up-event" })
+    ).toThrow();
+    expect(() =>
+      engineeringMemoryEventSchema.parse({ ...event, outcome: "maybe-fixed" })
+    ).toThrow();
+  });
+
+  it("validates memory projections and requires the schema version", () => {
+    const record = {
+      schemaVersion: 1,
+      id: "memory-fp-123",
+      recordType: "ci-failure",
+      fingerprintId: "fp-123",
+      fingerprintType: "ci-failure",
+      firstSeenAt: new Date().toISOString(),
+      lastSeenAt: new Date().toISOString(),
+      relationships: {
+        repository: "kinggucci195-sys/loopci",
+        workflow: "ci",
+        deployment: null,
+        incident: null,
+        files: ["src/example.ts"],
+        repairPlanIds: ["plan-1"]
+      },
+      outcomes: ["unknown"],
+      occurrenceCount: 1,
+      previousRepairCount: 0
+    };
+
+    expect(engineeringMemoryRecordSchema.parse(record).schemaVersion).toBe(1);
+    expect(() =>
+      engineeringMemoryRecordSchema.parse({
+        ...record,
+        schemaVersion: undefined
+      })
+    ).toThrow();
+  });
+
+  it("validates recognition summaries and rejects invalid confidence", () => {
+    const summary = {
+      seenBefore: true,
+      recurring: false,
+      recognitionType: "exact-fingerprint",
+      occurrenceCount: 2,
+      previousRepairCount: 1,
+      lastSuccessfulRepairPlanId: "plan-1",
+      likelyPriorFixer: "gerald",
+      confidence: 0.91,
+      confidenceReasoning: ["Seen 2 times", "Previous repair succeeded"]
+    };
+
+    expect(engineeringRecognitionSummarySchema.parse(summary).confidence).toBe(
+      0.91
+    );
+    expect(() =>
+      engineeringRecognitionSummarySchema.parse({
+        ...summary,
+        confidence: 1.5
+      })
+    ).toThrow();
   });
 });

@@ -68,6 +68,7 @@ Success metric: fewer failed builds land in a generic alerts channel with no own
 
 Use memory to reduce repeated diagnosis work.
 
+- Begin with Engineering Memory Engine v1: immutable memory events, rebuildable projections, exact failure fingerprints, and pure recognition summaries.
 - Store failure fingerprints by repo, workflow, job, step, and normalized error.
 - Detect repeated failures and flaky tests.
 - Show "seen before" count on repair cards.
