@@ -17,6 +17,7 @@ const envSchema = z.object({
     .transform((value) => value === "true"),
   LOOPCI_NOTIFICATION_USERS_PATH: z.string().optional(),
   LOOPCI_TEAMS_WEBHOOK_URL: z.string().url().optional(),
+  LOOPCI_SLACK_WEBHOOK_URL: z.string().url().optional(),
   LOOPCI_EMAIL_FROM: z.string().email().optional(),
   LOOPCI_SMTP_HOST: z.string().optional(),
   LOOPCI_SMTP_PORT: z.coerce.number().int().positive().default(587),

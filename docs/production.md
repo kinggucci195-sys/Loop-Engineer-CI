@@ -32,6 +32,7 @@ The root repository is for the full monorepo and Docker services. Keep Vercel da
 - `OPENAI_API_KEY`: required only when `LOOPCI_AI_PROVIDER=openai`.
 - `GITHUB_TOKEN`: reserved for future authenticated GitHub API actions.
 - `LOOPCI_TEAMS_WEBHOOK_URL`: optional Teams channel webhook for repair-plan alerts.
+- `LOOPCI_SLACK_WEBHOOK_URL`: optional Slack incoming webhook for repair-plan alerts.
 - `LOOPCI_SMTP_PASSWORD`: optional SMTP or Gmail app password for email alerts.
 
 Never commit `.env`, raw CI logs, private keys, tokens, or generated evidence that contains secrets.
@@ -51,14 +52,15 @@ Use a reverse proxy, managed load balancer, or platform router that enforces TLS
 
 ## Notifications
 
-LoopCI can notify a Teams channel and email recipients when a repair plan is created.
+LoopCI can notify Slack, a Teams channel, and email recipients when a repair plan is created.
 
 - Use `LOOPCI_NOTIFICATION_USERS_PATH` to point at `loopci.notifications.json`.
-- Map GitHub logins to email addresses in that file.
+- Map GitHub logins to email addresses, Slack webhooks, and Teams webhooks in that file.
+- Use `LOOPCI_SLACK_WEBHOOK_URL` for a default Slack channel, or `defaultSlackWebhookUrl` in the notification file.
 - Use `LOOPCI_TEAMS_WEBHOOK_URL` for a default Teams channel, or `defaultTeamsWebhookUrl` in the notification file.
 - Use Gmail SMTP, Google Workspace SMTP relay, or another SMTP provider for email delivery.
 
-The Teams and email buttons open a confirmation URL. They do not merge code or deploy production changes directly.
+The Slack, Teams, and email buttons open a confirmation URL. They do not merge code or deploy production changes directly.
 
 ## Safe Operating Mode
 

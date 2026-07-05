@@ -40,8 +40,8 @@ const metrics = [
   },
   {
     label: "Notification routes",
-    value: "2",
-    detail: "Teams and email enabled",
+    value: "3",
+    detail: "Slack, Teams, and email",
     tone: "violet",
     icon: IoNotificationsOutline
   }
@@ -159,7 +159,7 @@ export function DashboardShell() {
               <span>
                 <span className="block text-lg font-semibold">LoopCI</span>
                 <span className="block text-sm text-[var(--muted-foreground)]">
-                  Repair control
+                  Incident response
                 </span>
               </span>
             </a>
@@ -202,10 +202,10 @@ export function DashboardShell() {
           >
             <div>
               <p className="text-sm font-semibold text-[var(--accent-strong)]">
-                AI CI/CD repair loop
+                AI incident response for engineering teams
               </p>
               <h1 className="mt-2 text-[clamp(2rem,5vw,4rem)] font-semibold leading-[1]">
-                Broken builds become actionable repair cards.
+                Broken builds become owned repair cards.
               </h1>
             </div>
             <div className="flex flex-wrap gap-3">
@@ -381,6 +381,13 @@ function NotificationPanel() {
       </div>
 
       <div className="mt-6 space-y-4">
+        <div className="rounded-[8px] border border-[var(--panel-border)] bg-[var(--panel-raised)] p-4">
+          <p className="text-sm font-semibold">Slack card</p>
+          <p className="mt-2 text-sm leading-6 text-[var(--muted-foreground)]">
+            Build failure summary, risk, owner, and fix actions land in the
+            engineering channel.
+          </p>
+        </div>
         <div className="rounded-[8px] border border-[var(--panel-border)] bg-[var(--panel-raised)] p-4">
           <p className="text-sm font-semibold">Teams card</p>
           <p className="mt-2 text-sm leading-6 text-[var(--muted-foreground)]">

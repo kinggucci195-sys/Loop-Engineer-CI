@@ -1,31 +1,66 @@
 # LoopCI
 
-LoopCI is an AI-driven CI/CD repair loop. It watches failed pipelines, classifies the failure, filters flaky or noisy failures, prepares a low-risk repair plan, validates evidence, and stops at human review before merge or deploy.
+LoopCI is AI incident response for engineering teams.
 
-## What It Does
+When CI fails, LoopCI turns the red build into an owned, evidence-backed repair card: what failed, why it likely failed, who should see it, how risky it is, and what action is safe next.
 
-LoopCI gives teams an installable assistant for CI failures:
+It is not trying to be another chat box for pasted logs. It is the coordination layer around broken builds.
 
-- Receives signed GitHub `workflow_run` webhooks.
-- Applies repository and branch policy before accepting work.
-- Classifies failures into lint, typecheck, test, dependency, environment, workflow, secret, flaky, and unknown categories.
-- Creates a repair plan with recommended checks, required evidence, residual risk, and a safe review status.
-- Lets a worker claim queued low-risk plans and attach evidence bundles.
-- Sends Teams and email repair-plan alerts routed by the GitHub actor who triggered the failed run.
+## Why Not Just Paste Logs Into ChatGPT?
 
-It is designed for “advice plus evidence,” not blind auto-merge. The human keeps merge and deployment authority.
+Because engineering teams need more than a one-off answer.
 
-## Stack
+LoopCI is built to:
 
-- npm workspaces
-- TypeScript strict mode
-- Next.js 16 + React 19 dashboard
-- Fastify orchestrator service
-- TypeScript worker service
-- Jest tests
-- ESLint flat config
-- Docker Compose for local microservices
-- GitHub Actions CI/CD
+- Detect failed pipelines automatically.
+- Identify the likely owner from GitHub actor and commit context.
+- Separate low-risk failures from risky workflow, dependency, secret, or environment failures.
+- Send the right repair card to Teams or email.
+- Preserve evidence, recommended checks, and residual risk.
+- Keep merge and deploy authority behind human approval.
+
+ChatGPT can explain a log. LoopCI helps a team run the response.
+
+## What Happens When CI Fails
+
+```text
+GitHub Actions fails
+-> LoopCI receives a signed workflow_run webhook
+-> Repository policy checks branch, repo, and allowed failure classes
+-> Failure is classified by kind, confidence, and risk
+-> A repair plan is created with evidence and recommended checks
+-> The triggering developer or default team channel is notified
+-> Low-risk fixes can be queued for worker handling
+-> Risky changes stay behind human review
+```
+
+## Current Capabilities
+
+- Signed GitHub Actions webhook ingestion.
+- Repository and branch policy enforcement.
+- Failure classification for format, lint, typecheck, tests, dependencies, environment, workflow config, secrets, flaky/noisy failures, and unknown failures.
+- Repair plans with evidence requirements, recommended checks, residual risk, and review status.
+- Teams Adaptive Card and Slack Block Kit notifications with diagnosis, GitHub run, and fix-request links.
+- SMTP/Gmail-compatible email notifications.
+- GitHub actor to notification target routing through `loopci.notifications.json`.
+- Safe request-fix checkpoint for low-risk plans.
+- Worker evidence bundle generation.
+- Dashboard for repair queue, notification routing, and policy posture.
+
+## Positioning
+
+LoopCI should be evaluated against engineering incident tools, not coding assistants.
+
+It coordinates the response to broken builds:
+
+- Who owns the failure?
+- Has this happened before?
+- Is it flaky or real?
+- Is it safe to request a repair?
+- What evidence must a reviewer see before merge?
+- Which channel should get the alert?
+
+Generic AI assistants help an individual reason about code. LoopCI helps a team operationalize CI failure response.
 
 ## Services
 
@@ -37,6 +72,19 @@ packages/contracts     Shared schemas and domain types
 packages/config        Environment parsing
 packages/logger        Structured logger
 ```
+
+## Stack
+
+- npm workspaces
+- TypeScript strict mode
+- Next.js 16 + React 19 dashboard
+- Tailwind CSS dashboard UI
+- Fastify orchestrator service
+- TypeScript worker service
+- Jest tests
+- ESLint flat config
+- Docker Compose for local microservices
+- GitHub Actions CI/CD
 
 ## Local Development
 
@@ -84,8 +132,7 @@ Current public URL:
 https://loopci.vercel.app
 ```
 
-Do not deploy the repository root to the old Vercel Services project. The
-dashboard build expects the `apps/web` project root.
+Do not deploy the repository root to the old Vercel Services project. The dashboard build expects the `apps/web` project root.
 
 Then add a GitHub webhook for `Workflow runs` pointing to:
 
@@ -100,6 +147,8 @@ See:
 - [GitHub install guide](docs/install-github.md)
 - [Production runbook](docs/production.md)
 - [Security model](docs/security.md)
+- [Product positioning](docs/product-positioning.md)
+- [Product execution plan](docs/product-plan.md)
 
 ## Example CI Failure Event
 
@@ -124,17 +173,19 @@ curl -X POST http://localhost:4000/events/github-actions/failure \
 
 - GitHub webhooks must be signed with `X-Hub-Signature-256`.
 - Repository policy controls accepted repos, branches, risk levels, and failure kinds.
-- No auto-merge in the MVP.
-- No production deploy authority.
+- AI never merges code without approval.
+- No production deploy authority in the MVP.
 - AI output is treated as advice until deterministic checks pass.
 - Every repair plan must include evidence and residual risk.
 - CI workflow edits require stricter human review than normal source changes.
 
 ## Roadmap
 
-1. Observe-only CI failure diagnosis.
-2. PR-only low-risk repair plans.
-3. Flaky-test registry and rerun policy.
-4. Controlled auto-merge for docs/tests/format-only changes.
-5. Staging deployment diagnosis.
-6. Canary and rollback assistant.
+1. GitHub PR comments with root cause, confidence, evidence, and suggested fix.
+2. Jira and Linear ticket creation from repair plans.
+3. Ownership routing using commit history, CODEOWNERS, and `git blame`.
+4. Flaky-test registry and historical failure memory.
+5. Weekly engineering health reports.
+6. PagerDuty incident creation for protected branch failures.
+7. GitHub App repair PR creation for low-risk fixes.
+8. Approval workflows, audit logs, SSO, and enterprise retention controls.

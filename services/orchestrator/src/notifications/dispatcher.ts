@@ -8,6 +8,7 @@ import {
   type NotificationUser
 } from "./notification-config";
 import { sendEmailRepairPlanNotification } from "./email";
+import { sendSlackRepairPlanNotification } from "./slack";
 import { sendTeamsRepairPlanNotification } from "./teams";
 
 export interface NotificationDispatcher {
@@ -48,9 +49,14 @@ export function createNotificationDispatcher(
         target.user?.teamsWebhookUrl ??
         config.defaultTeamsWebhookUrl ??
         env.LOOPCI_TEAMS_WEBHOOK_URL;
+      const slackWebhookUrl =
+        target.user?.slackWebhookUrl ??
+        config.defaultSlackWebhookUrl ??
+        env.LOOPCI_SLACK_WEBHOOK_URL;
 
       await Promise.all([
         notifyTeams(teamsWebhookUrl, plan, env, logger),
+        notifySlack(slackWebhookUrl, plan, env, logger),
         notifyEmail(target.emails, plan, env, logger)
       ]);
     }
@@ -145,6 +151,31 @@ async function notifyEmail(
     logger.error(
       { error, planId: plan.id },
       "Failed to send email notification"
+    );
+  }
+}
+
+async function notifySlack(
+  webhookUrl: string | undefined,
+  plan: RepairPlan,
+  env: LoopCiEnv,
+  logger: Logger
+) {
+  if (!webhookUrl) {
+    logger.debug(
+      { planId: plan.id },
+      "Skipping Slack notification because no webhook URL is configured"
+    );
+    return;
+  }
+
+  try {
+    await sendSlackRepairPlanNotification(webhookUrl, plan, env);
+    logger.info({ planId: plan.id }, "Sent Slack repair-plan notification");
+  } catch (error) {
+    logger.error(
+      { error, planId: plan.id },
+      "Failed to send Slack notification"
     );
   }
 }

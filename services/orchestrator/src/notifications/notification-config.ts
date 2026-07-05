@@ -4,12 +4,14 @@ import { z } from "zod";
 const notificationUserSchema = z.object({
   displayName: z.string().min(1).optional(),
   email: z.string().email().optional(),
-  teamsWebhookUrl: z.string().url().optional()
+  teamsWebhookUrl: z.string().url().optional(),
+  slackWebhookUrl: z.string().url().optional()
 });
 
 const notificationConfigSchema = z.object({
   defaultEmails: z.array(z.string().email()).default([]),
   defaultTeamsWebhookUrl: z.string().url().optional(),
+  defaultSlackWebhookUrl: z.string().url().optional(),
   useCommitAuthorEmailFallback: z.boolean().default(true),
   users: z.record(notificationUserSchema).default({})
 });

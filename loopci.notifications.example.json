@@ -1,12 +1,14 @@
 {
   "defaultEmails": ["build-alerts@example.com"],
   "defaultTeamsWebhookUrl": "https://example.webhook.office.com/webhookb2/example",
+  "defaultSlackWebhookUrl": "https://hooks.slack.com/services/example",
   "useCommitAuthorEmailFallback": true,
   "users": {
     "github-login": {
       "displayName": "Example Developer",
       "email": "developer@example.com",
-      "teamsWebhookUrl": "https://example.webhook.office.com/webhookb2/developer-channel"
+      "teamsWebhookUrl": "https://example.webhook.office.com/webhookb2/developer-channel",
+      "slackWebhookUrl": "https://hooks.slack.com/services/developer-channel"
     }
   }
 }

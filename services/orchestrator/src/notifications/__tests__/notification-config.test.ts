@@ -20,9 +20,11 @@ describe("notification config", () => {
       filePath,
       JSON.stringify({
         defaultEmails: ["builds@example.com"],
+        defaultSlackWebhookUrl: "https://hooks.slack.com/services/default",
         users: {
           "kinggucci195-sys": {
-            email: "dev@example.com"
+            email: "dev@example.com",
+            slackWebhookUrl: "https://hooks.slack.com/services/developer"
           }
         }
       }),
@@ -32,6 +34,12 @@ describe("notification config", () => {
     const config = await loadNotificationConfig(filePath);
 
     expect(config.defaultEmails).toEqual(["builds@example.com"]);
+    expect(config.defaultSlackWebhookUrl).toBe(
+      "https://hooks.slack.com/services/default"
+    );
     expect(config.users["kinggucci195-sys"]?.email).toBe("dev@example.com");
+    expect(config.users["kinggucci195-sys"]?.slackWebhookUrl).toBe(
+      "https://hooks.slack.com/services/developer"
+    );
   });
 });

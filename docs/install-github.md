@@ -43,21 +43,25 @@ Edit `loopci.config.json` and add every repository that can send events:
 
 LoopCI ignores repositories disabled by policy and ignores branches outside `allowedBranches`.
 
-## 3. Configure Teams And Email Alerts
+## 3. Configure Slack, Teams, And Email Alerts
 
 Edit `loopci.notifications.json` to route GitHub actors to notification targets:
 
 ```json
 {
   "defaultEmails": ["build-alerts@example.com"],
+  "defaultSlackWebhookUrl": "https://hooks.slack.com/services/example",
   "useCommitAuthorEmailFallback": true,
   "users": {
     "github-login": {
-      "email": "developer@example.com"
+      "email": "developer@example.com",
+      "slackWebhookUrl": "https://hooks.slack.com/services/developer-channel"
     }
   }
 }
 ```
+
+For Slack channel alerts, set either `LOOPCI_SLACK_WEBHOOK_URL` or `defaultSlackWebhookUrl`.
 
 For Teams channel alerts, set either `LOOPCI_TEAMS_WEBHOOK_URL` or `defaultTeamsWebhookUrl`.
 
@@ -72,7 +76,7 @@ LOOPCI_SMTP_USER=loopci@example.com
 LOOPCI_SMTP_PASSWORD=<gmail-app-password-or-smtp-secret>
 ```
 
-The first implementation sends Teams channel cards and email messages. Direct Teams DMs require a Teams bot registration and user ID mapping.
+The first implementation sends Slack channel cards, Teams channel cards, and email messages. Direct Teams DMs require a Teams bot registration and user ID mapping.
 
 ## 4. Add The GitHub Webhook
 
