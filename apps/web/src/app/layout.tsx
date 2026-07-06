@@ -1,15 +1,21 @@
 import type { Metadata } from "next";
-import { Urbanist } from "next/font/google";
+import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "LoopCI",
-  description: "AI-driven CI/CD repair loop dashboard"
+  description: "Failed build response for engineering teams"
 };
 
-const urbanist = Urbanist({
+const geistSans = Geist({
   subsets: ["latin"],
-  variable: "--font-urbanist",
+  variable: "--font-geist-sans",
+  display: "swap"
+});
+
+const geistMono = Geist_Mono({
+  subsets: ["latin"],
+  variable: "--font-geist-mono",
   display: "swap"
 });
 
@@ -17,7 +23,7 @@ export default function RootLayout({
   children
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={urbanist.variable}>
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body className="font-sans antialiased">{children}</body>
     </html>
   );

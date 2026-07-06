@@ -2,25 +2,25 @@
 @source "../**/*.{ts,tsx}";
 
 @theme inline {
-  --font-sans:
-    "Urbanist", "Urbanist Fallback", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Geist", "Geist Fallback", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Geist Mono", "Geist Mono Fallback", ui-monospace, monospace;
 }
 
 :root {
-  --background: oklch(0.16 0.01 105);
-  --foreground: oklch(0.94 0.01 95);
-  --muted: oklch(0.27 0.012 105);
-  --muted-foreground: oklch(0.72 0.018 105);
-  --panel: oklch(0.205 0.012 105);
-  --panel-raised: oklch(0.245 0.014 105);
-  --panel-border: oklch(0.35 0.018 105);
-  --accent: oklch(0.72 0.17 151);
-  --accent-strong: oklch(0.8 0.18 151);
-  --warning: oklch(0.78 0.17 75);
-  --danger: oklch(0.68 0.2 25);
-  --info: oklch(0.72 0.12 220);
-  --violet: oklch(0.74 0.13 305);
+  --background: oklch(0.975 0.006 255);
+  --foreground: oklch(0.18 0.014 255);
+  --muted: oklch(0.94 0.008 255);
+  --muted-foreground: oklch(0.48 0.018 255);
+  --panel: oklch(1 0 0);
+  --panel-raised: oklch(0.965 0.006 255);
+  --panel-border: oklch(0.86 0.012 255);
+  --accent: oklch(0.62 0.15 155);
+  --accent-strong: oklch(0.48 0.13 155);
+  --warning: oklch(0.68 0.15 75);
+  --danger: oklch(0.58 0.19 25);
+  --info: oklch(0.56 0.13 235);
+  --violet: oklch(0.52 0.12 295);
+  --ink: oklch(0.13 0.014 255);
 }
 
 * {

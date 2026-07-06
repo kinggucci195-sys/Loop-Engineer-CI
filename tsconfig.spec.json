@@ -4,6 +4,6 @@
     "noEmit": true,
     "types": ["jest", "node"]
   },
-  "include": ["packages/**/*.ts", "services/**/*.ts"],
+  "include": ["apps/web/src/**/*.ts", "packages/**/*.ts", "services/**/*.ts"],
   "exclude": ["node_modules", "**/dist/**"]
 }

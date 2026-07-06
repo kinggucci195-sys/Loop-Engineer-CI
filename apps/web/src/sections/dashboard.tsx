@@ -1,241 +1,75 @@
+import Link from "next/link";
 import {
-  IoAlertCircleOutline,
   IoArrowForward,
   IoCheckmarkCircleOutline,
   IoCodeSlashOutline,
-  IoConstructOutline,
   IoGitBranchOutline,
   IoLogoGithub,
   IoMailUnreadOutline,
   IoNotificationsOutline,
   IoPeopleOutline,
-  IoPlayCircleOutline,
   IoShieldCheckmarkOutline,
-  IoTimeOutline
+  IoTrendingUpOutline
 } from "react-icons/io5";
+import {
+  activeIncident,
+  caseTimeline,
+  getActionablePlanCount,
+  policyRows,
+  productMetrics,
+  repairQueue,
+  routeStatuses,
+  type PlanState,
+  type RiskLevel
+} from "./dashboard-model";
 
-const navItems = ["Overview", "Repair queue", "Notifications", "Policy"];
+const navItems = ["Overview", "Memory", "Queue", "Routes", "Policy"];
 
-const metrics = [
-  {
-    label: "Active repair plans",
-    value: "12",
-    detail: "3 ready for human review",
-    tone: "accent",
-    icon: IoConstructOutline
-  },
-  {
-    label: "Median diagnosis",
-    value: "38s",
-    detail: "Webhook to repair card",
-    tone: "info",
-    icon: IoTimeOutline
-  },
-  {
-    label: "Human gates",
-    value: "100%",
-    detail: "Merge authority retained",
-    tone: "warning",
-    icon: IoShieldCheckmarkOutline
-  },
-  {
-    label: "Notification routes",
-    value: "3",
-    detail: "Slack, Teams, and email",
-    tone: "violet",
-    icon: IoNotificationsOutline
-  }
-] as const;
+const riskClass: Record<RiskLevel, string> = {
+  low: "border-[var(--accent)] bg-[oklch(0.96_0.03_155)] text-[var(--accent-strong)]",
+  medium:
+    "border-[var(--warning)] bg-[oklch(0.96_0.035_75)] text-[oklch(0.48_0.12_75)]",
+  high: "border-[var(--danger)] bg-[oklch(0.96_0.03_25)] text-[var(--danger)]"
+};
 
-const repairPlans = [
-  {
-    id: "plan-2002",
-    repository: "kinggucci195-sys/loopci",
-    branch: "main",
-    failure: "workflow-config",
-    owner: "kinggucci195-sys",
-    channel: "Slack + Teams",
-    risk: "high",
-    status: "Human review",
-    summary:
-      "Workflow failed after a config-level event; PR automation is held."
-  },
-  {
-    id: "plan-3003",
-    repository: "billing-api",
-    branch: "feature/invoices",
-    failure: "lint",
-    owner: "maya-dev",
-    channel: "Slack",
-    risk: "low",
-    status: "Fix ready",
-    summary: "ESLint rule violation can be repaired with a scoped source patch."
-  },
-  {
-    id: "plan-4421",
-    repository: "web-dashboard",
-    branch: "release/2026-07",
-    failure: "typecheck",
-    owner: "devops-lead",
-    channel: "Email",
-    risk: "low",
-    status: "Queued",
-    summary: "Type mismatch isolated to one component prop contract."
-  }
-] as const;
+const stateClass: Record<PlanState, string> = {
+  ready:
+    "border-[var(--accent)] bg-[oklch(0.96_0.03_155)] text-[var(--accent-strong)]",
+  queued: "border-[var(--info)] bg-[oklch(0.96_0.025_235)] text-[var(--info)]",
+  review:
+    "border-[var(--warning)] bg-[oklch(0.96_0.035_75)] text-[oklch(0.48_0.12_75)]"
+};
 
-const timeline = [
-  {
-    title: "Webhook accepted",
-    detail: "Signed GitHub workflow_run failure normalized into a CI event.",
-    icon: IoLogoGithub
-  },
-  {
-    title: "Actor routed",
-    detail: "GitHub user mapped to Slack, Teams, or email fallback.",
-    icon: IoPeopleOutline
-  },
-  {
-    title: "Repair card sent",
-    detail: "Chat and email include diagnosis, owner, risk, and fix request.",
-    icon: IoMailUnreadOutline
-  },
-  {
-    title: "Fix request gated",
-    detail: "Only low-risk plans can enter worker handling from the button.",
-    icon: IoShieldCheckmarkOutline
-  }
-] as const;
-
-const policyRows = [
-  ["Auto merge", "Off", "All merges stay human-owned"],
-  ["Low-risk automation", "Lint, typecheck, unit-test", "Draft repair only"],
-  ["Blocked risk", "Medium and high", "Human review required"],
-  ["Secrets", "Never patched", "No production secret writes"]
-] as const;
-
-function toneClasses(tone: (typeof metrics)[number]["tone"]) {
-  const classes = {
-    accent:
-      "border-[var(--accent)] bg-[oklch(0.23_0.05_151)] text-[var(--accent-strong)]",
-    info: "border-[var(--info)] bg-[oklch(0.23_0.04_220)] text-[var(--info)]",
-    warning:
-      "border-[var(--warning)] bg-[oklch(0.24_0.045_75)] text-[var(--warning)]",
-    violet:
-      "border-[var(--violet)] bg-[oklch(0.23_0.04_305)] text-[var(--violet)]"
-  };
-
-  return classes[tone];
-}
-
-function riskClass(risk: (typeof repairPlans)[number]["risk"]) {
-  if (risk === "low") {
-    return "border-[var(--accent)] text-[var(--accent-strong)]";
-  }
-
-  return "border-[var(--danger)] text-[var(--danger)]";
-}
-
-/**
- * DashboardShell renders the LoopCI operator view.
- *
- * The first screen prioritizes the repair queue, channel routing, and policy
- * gates that developers need during a failed CI incident.
- */
 export function DashboardShell() {
+  const actionablePlanCount = getActionablePlanCount();
+
   return (
     <main className="min-h-screen bg-[var(--background)] text-[var(--foreground)]">
-      <div className="mx-auto grid min-h-screen w-full max-w-[96rem] grid-cols-1 lg:grid-cols-[16rem_1fr]">
-        <aside className="border-b border-[var(--panel-border)] bg-[oklch(0.13_0.01_105)] px-5 py-5 lg:border-b-0 lg:border-r">
-          <div className="flex items-center justify-between gap-4 lg:block">
-            <a
-              href="/"
-              className="flex items-center gap-3 rounded-[8px] focus-visible:outline-2 focus-visible:outline-[var(--accent)]"
-              aria-label="LoopCI overview"
-            >
-              <span className="flex h-10 w-10 items-center justify-center rounded-[8px] border border-[var(--accent)] bg-[oklch(0.22_0.05_151)] text-[var(--accent-strong)]">
-                <IoCodeSlashOutline className="h-5 w-5" aria-hidden />
-              </span>
-              <span>
-                <span className="block text-lg font-semibold">LoopCI</span>
-                <span className="block text-sm text-[var(--muted-foreground)]">
-                  Incident response
-                </span>
-              </span>
-            </a>
-            <span className="rounded-[8px] border border-[var(--panel-border)] px-3 py-2 text-sm text-[var(--muted-foreground)] lg:mt-7 lg:inline-block">
-              Safe mode
-            </span>
-          </div>
+      <div className="grid min-h-screen lg:grid-cols-[15.5rem_1fr]">
+        <SideNav />
 
-          <nav className="mt-6 flex gap-2 overflow-x-auto lg:flex-col lg:overflow-visible">
-            {navItems.map((item, index) => (
-              <a
-                key={item}
-                href={`#${item.toLowerCase().replace(" ", "-")}`}
-                className={`whitespace-nowrap rounded-[8px] px-3 py-2 text-sm font-medium transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-[var(--accent)] ${
-                  index === 0
-                    ? "bg-[var(--panel-raised)] text-[var(--foreground)]"
-                    : "text-[var(--muted-foreground)] hover:bg-[var(--panel)] hover:text-[var(--foreground)]"
-                }`}
-              >
-                {item}
-              </a>
-            ))}
-          </nav>
+        <section className="min-w-0 overflow-x-hidden">
+          <TopBar />
 
-          <div className="mt-8 hidden rounded-[8px] border border-[var(--panel-border)] bg-[var(--panel)] p-4 lg:block">
-            <p className="text-sm font-semibold">Current authority</p>
-            <p className="mt-2 text-sm leading-6 text-[var(--muted-foreground)]">
-              The operational layer between a failed build and a safe fix.
-            </p>
-            <p className="mt-4 rounded-[8px] bg-[oklch(0.24_0.045_75)] px-3 py-2 text-sm font-semibold text-[var(--warning)]">
-              No auto-merge
-            </p>
-          </div>
-        </aside>
+          <div className="mx-auto max-w-[92rem] px-4 py-5 sm:px-6 lg:px-8">
+            <StatusStrip actionablePlanCount={actionablePlanCount} />
 
-        <section className="min-w-0 px-5 py-5 sm:px-6 lg:px-8">
-          <header
-            id="overview"
-            className="flex flex-col gap-5 border-b border-[var(--panel-border)] pb-5 xl:flex-row xl:items-center xl:justify-between"
-          >
-            <div>
-              <p className="text-sm font-semibold text-[var(--accent-strong)]">
-                Failed build response for engineering teams
-              </p>
-              <h1 className="mt-2 text-[clamp(2rem,5vw,4rem)] font-semibold leading-[1]">
-                When CI breaks, LoopCI already investigated.
-              </h1>
+            <div className="mt-5 grid gap-5 xl:grid-cols-[1.35fr_0.65fr]">
+              <CurrentIncident />
+              <MemorySummary />
             </div>
-            <div className="flex flex-wrap gap-3">
-              <a
-                href="#repair-queue"
-                className="inline-flex items-center gap-2 rounded-[8px] bg-[var(--accent)] px-4 py-3 text-sm font-semibold text-[oklch(0.12_0.01_105)] transition-colors duration-200 hover:bg-[var(--accent-strong)] focus-visible:outline-2 focus-visible:outline-[var(--accent-strong)]"
-              >
-                <IoPlayCircleOutline className="h-5 w-5" aria-hidden />
-                Review queue
-              </a>
-              <a
-                href="#notifications"
-                className="inline-flex items-center gap-2 rounded-[8px] border border-[var(--panel-border)] bg-[var(--panel)] px-4 py-3 text-sm font-semibold transition-colors duration-200 hover:bg-[var(--panel-raised)] focus-visible:outline-2 focus-visible:outline-[var(--accent)]"
-              >
-                <IoNotificationsOutline className="h-5 w-5" aria-hidden />
-                Routes
-              </a>
+
+            <MetricGrid />
+
+            <div className="mt-5 grid gap-5 xl:grid-cols-[1.45fr_0.55fr]">
+              <RepairQueue />
+              <RoutingPanel />
             </div>
-          </header>
 
-          <MetricGrid />
-
-          <div className="mt-6 grid gap-6 xl:grid-cols-[1.45fr_0.55fr]">
-            <RepairQueue />
-            <NotificationPanel />
-          </div>
-
-          <div className="mt-6 grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-            <PipelineTimeline />
-            <PolicyPanel />
+            <div className="mt-5 grid gap-5 xl:grid-cols-[0.95fr_1.05fr]">
+              <CaseTimeline />
+              <PolicyPanel />
+            </div>
           </div>
         </section>
       </div>
@@ -243,34 +77,276 @@ export function DashboardShell() {
   );
 }
 
+function SideNav() {
+  return (
+    <aside className="border-b border-[var(--panel-border)] bg-[var(--ink)] px-4 py-4 text-white lg:border-b-0 lg:border-r">
+      <div className="flex items-center justify-between gap-3 lg:block">
+        <Link
+          href="/"
+          className="flex items-center gap-3 rounded-[8px] focus-visible:outline-2 focus-visible:outline-[var(--accent)]"
+          aria-label="LoopCI overview"
+        >
+          <span className="flex h-9 w-9 items-center justify-center rounded-[8px] bg-[var(--accent)] text-[var(--ink)]">
+            <IoCodeSlashOutline className="h-5 w-5" aria-hidden />
+          </span>
+          <span>
+            <span className="block text-base font-semibold">LoopCI</span>
+            <span className="block text-xs text-white/60">Build response</span>
+          </span>
+        </Link>
+
+        <span className="rounded-[8px] border border-white/15 px-2.5 py-1.5 text-xs font-medium text-white/70 lg:mt-7 lg:inline-block">
+          Safe mode
+        </span>
+      </div>
+
+      <nav className="mt-5 flex gap-1.5 overflow-x-auto lg:flex-col lg:overflow-visible">
+        {navItems.map((item, index) => (
+          <a
+            key={item}
+            href={`#${item.toLowerCase()}`}
+            className={`whitespace-nowrap rounded-[8px] px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-[var(--accent)] ${
+              index === 0
+                ? "bg-[var(--accent)] text-white"
+                : "text-white/64 hover:bg-white/10 hover:text-white"
+            }`}
+          >
+            {item}
+          </a>
+        ))}
+      </nav>
+
+      <div className="mt-8 hidden border-t border-white/15 pt-5 lg:block">
+        <p className="text-xs font-semibold uppercase text-white/45">
+          Authority
+        </p>
+        <p className="mt-2 text-sm leading-6 text-white/72">
+          Draft repairs only. Human approval controls merge and deploy.
+        </p>
+      </div>
+    </aside>
+  );
+}
+
+function TopBar() {
+  return (
+    <header
+      id="overview"
+      className="border-b border-[var(--panel-border)] bg-[var(--panel)]"
+    >
+      <div className="mx-auto flex max-w-[92rem] flex-col gap-3 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8">
+        <div>
+          <p className="text-xs font-semibold uppercase text-[var(--muted-foreground)]">
+            Failed build response
+          </p>
+          <h1 className="mt-1 text-2xl font-semibold tracking-normal text-[var(--foreground)]">
+            CI incident console
+          </h1>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <a
+            href="#queue"
+            className="inline-flex h-10 items-center gap-2 rounded-[8px] bg-[var(--accent)] px-3 text-sm font-semibold text-white transition-colors hover:bg-[var(--accent-strong)] focus-visible:outline-2 focus-visible:outline-[var(--info)]"
+          >
+            <IoArrowForward className="h-4 w-4" aria-hidden />
+            Queue
+          </a>
+          <a
+            href="#routes"
+            className="inline-flex h-10 items-center gap-2 rounded-[8px] border border-[var(--panel-border)] bg-[var(--panel)] px-3 text-sm font-semibold transition-colors hover:bg-[var(--panel-raised)] focus-visible:outline-2 focus-visible:outline-[var(--info)]"
+          >
+            <IoNotificationsOutline className="h-4 w-4" aria-hidden />
+            Routes
+          </a>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function StatusStrip({ actionablePlanCount }: { actionablePlanCount: number }) {
+  return (
+    <section className="grid gap-3 rounded-[8px] border border-[var(--panel-border)] bg-[var(--panel)] p-3 md:grid-cols-[1fr_auto_auto] md:items-center">
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-[8px] border border-[var(--accent)] bg-[oklch(0.96_0.03_155)] px-2.5 py-1 text-xs font-semibold text-[var(--accent-strong)]">
+            {activeIncident.status}
+          </span>
+          <span className="text-sm font-semibold">
+            {activeIncident.repository}
+          </span>
+        </div>
+        <p className="mt-1 truncate text-sm text-[var(--muted-foreground)]">
+          {activeIncident.workflow} failed at {activeIncident.failedStep}
+        </p>
+      </div>
+
+      <span className="font-mono text-sm text-[var(--muted-foreground)]">
+        {actionablePlanCount} actionable
+      </span>
+      <span className="font-mono text-sm text-[var(--muted-foreground)]">
+        confidence {activeIncident.recognitionConfidence}
+      </span>
+    </section>
+  );
+}
+
+function CurrentIncident() {
+  return (
+    <section className="rounded-[8px] border border-[var(--panel-border)] bg-[var(--panel)]">
+      <div className="border-b border-[var(--panel-border)] p-5">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase text-[var(--muted-foreground)]">
+              Current failure
+            </p>
+            <h2 className="mt-2 text-2xl font-semibold">
+              {activeIncident.failureKind} in {activeIncident.failedStep}
+            </h2>
+            <div className="mt-3 flex flex-wrap gap-3 text-sm text-[var(--muted-foreground)]">
+              <span className="inline-flex items-center gap-1.5">
+                <IoGitBranchOutline className="h-4 w-4" aria-hidden />
+                {activeIncident.branch}
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <IoLogoGithub className="h-4 w-4" aria-hidden />
+                {activeIncident.workflow}
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <IoPeopleOutline className="h-4 w-4" aria-hidden />
+                {activeIncident.likelyOwner}
+              </span>
+            </div>
+          </div>
+
+          <Link
+            href={`/actions/request-fix?planId=${encodeURIComponent(
+              repairQueue[0]?.id ?? "selected-plan"
+            )}&risk=low`}
+            className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-[8px] bg-[var(--accent)] px-3 text-sm font-semibold text-white transition-colors hover:bg-[var(--accent-strong)] focus-visible:outline-2 focus-visible:outline-[var(--accent)]"
+          >
+            <IoCheckmarkCircleOutline className="h-4 w-4" aria-hidden />
+            Fix
+          </Link>
+        </div>
+      </div>
+
+      <div className="grid gap-0 md:grid-cols-3">
+        <FactBlock
+          label="Seen before"
+          value={`${activeIncident.seenCount} times`}
+          detail={`Average resolution ${activeIncident.averageResolution}`}
+        />
+        <FactBlock
+          label="Last fixed by"
+          value={activeIncident.lastFixedBy}
+          detail={`${activeIncident.repairSuccessRate} repairs worked`}
+        />
+        <FactBlock
+          label="Next action"
+          value="Draft PR"
+          detail={activeIncident.nextAction}
+        />
+      </div>
+    </section>
+  );
+}
+
+function FactBlock({
+  label,
+  value,
+  detail
+}: {
+  label: string;
+  value: string;
+  detail: string;
+}) {
+  return (
+    <div className="border-t border-[var(--panel-border)] p-5 md:border-r md:last:border-r-0">
+      <p className="text-xs font-semibold uppercase text-[var(--muted-foreground)]">
+        {label}
+      </p>
+      <p className="mt-2 text-xl font-semibold">{value}</p>
+      <p className="mt-1 text-sm leading-6 text-[var(--muted-foreground)]">
+        {detail}
+      </p>
+    </div>
+  );
+}
+
+function MemorySummary() {
+  return (
+    <section
+      id="memory"
+      className="rounded-[8px] border border-[var(--panel-border)] bg-[var(--panel)] p-5"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold uppercase text-[var(--muted-foreground)]">
+            Memory
+          </p>
+          <h2 className="mt-2 text-xl font-semibold">What worked last time</h2>
+        </div>
+        <IoTrendingUpOutline
+          className="h-6 w-6 text-[var(--accent-strong)]"
+          aria-hidden
+        />
+      </div>
+
+      <p className="mt-5 border-l-2 border-[var(--accent)] pl-4 text-sm leading-6 text-[var(--foreground)]">
+        {activeIncident.lastSuccessfulRepair}
+      </p>
+
+      <dl className="mt-5 grid grid-cols-2 gap-3">
+        <MemoryDatum label="Owner" value={activeIncident.likelyOwner} />
+        <MemoryDatum
+          label="Confidence"
+          value={activeIncident.recognitionConfidence}
+        />
+        <MemoryDatum label="Success" value={activeIncident.repairSuccessRate} />
+        <MemoryDatum
+          label="Resolved in"
+          value={activeIncident.averageResolution}
+        />
+      </dl>
+    </section>
+  );
+}
+
+function MemoryDatum({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-[8px] border border-[var(--panel-border)] bg-[var(--panel-raised)] p-3">
+      <dt className="text-xs font-semibold uppercase text-[var(--muted-foreground)]">
+        {label}
+      </dt>
+      <dd className="mt-1 font-mono text-sm font-semibold">{value}</dd>
+    </div>
+  );
+}
+
 function MetricGrid() {
   return (
-    <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      {metrics.map((metric) => {
-        const Icon = metric.icon;
-
-        return (
-          <article
-            key={metric.label}
-            className="rounded-[8px] border border-[var(--panel-border)] bg-[var(--panel)] p-4"
-          >
-            <div
-              className={`inline-flex h-10 w-10 items-center justify-center rounded-[8px] border ${toneClasses(
-                metric.tone
-              )}`}
-            >
-              <Icon className="h-5 w-5" aria-hidden />
-            </div>
-            <p className="mt-4 text-sm text-[var(--muted-foreground)]">
-              {metric.label}
-            </p>
-            <p className="mt-1 text-3xl font-semibold">{metric.value}</p>
-            <p className="mt-2 text-sm text-[var(--muted-foreground)]">
-              {metric.detail}
-            </p>
-          </article>
-        );
-      })}
+    <section className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      {productMetrics.map((metric) => (
+        <article
+          key={metric.label}
+          className="rounded-[8px] border border-[var(--panel-border)] bg-[var(--panel)] p-4"
+        >
+          <p className="text-sm text-[var(--muted-foreground)]">
+            {metric.label}
+          </p>
+          <div className="mt-2 flex items-end justify-between gap-3">
+            <p className="font-mono text-3xl font-semibold">{metric.value}</p>
+            <span className="rounded-[8px] bg-[var(--panel-raised)] px-2 py-1 text-xs font-semibold text-[var(--accent-strong)]">
+              {metric.trend}
+            </span>
+          </div>
+          <p className="mt-2 text-sm text-[var(--muted-foreground)]">
+            {metric.detail}
+          </p>
+        </article>
+      ))}
     </section>
   );
 }
@@ -278,167 +354,180 @@ function MetricGrid() {
 function RepairQueue() {
   return (
     <section
-      id="repair-queue"
-      className="rounded-[8px] border border-[var(--panel-border)] bg-[var(--panel)]"
+      id="queue"
+      className="min-w-0 rounded-[8px] border border-[var(--panel-border)] bg-[var(--panel)]"
     >
       <div className="flex flex-col gap-3 border-b border-[var(--panel-border)] p-5 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-xl font-semibold">Repair queue</h2>
-          <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-            Failed runs ranked by risk, owner, and next action.
+          <p className="text-xs font-semibold uppercase text-[var(--muted-foreground)]">
+            Queue
           </p>
+          <h2 className="mt-2 text-xl font-semibold">Repair plans</h2>
         </div>
-        <span className="inline-flex w-fit items-center gap-2 rounded-[8px] border border-[var(--accent)] px-3 py-2 text-sm font-semibold text-[var(--accent-strong)]">
-          <IoCheckmarkCircleOutline className="h-5 w-5" aria-hidden />3
-          actionable
+        <span className="font-mono text-sm text-[var(--muted-foreground)]">
+          {getActionablePlanCount()} ready
         </span>
       </div>
 
-      <div className="divide-y divide-[var(--panel-border)]">
-        {repairPlans.map((plan) => (
-          <article key={plan.id} className="p-5">
-            <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-start">
+      <div className="divide-y divide-[var(--panel-border)] md:hidden">
+        {repairQueue.map((plan) => (
+          <article key={plan.id} className="p-4">
+            <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-[8px] bg-[var(--panel-raised)] px-3 py-1 text-sm font-semibold">
-                    {plan.failure}
-                  </span>
-                  <span
-                    className={`rounded-[8px] border px-3 py-1 text-sm font-semibold ${riskClass(
-                      plan.risk
-                    )}`}
-                  >
-                    {plan.risk} risk
-                  </span>
-                  <span className="rounded-[8px] border border-[var(--panel-border)] px-3 py-1 text-sm text-[var(--muted-foreground)]">
-                    {plan.status}
-                  </span>
-                </div>
-                <h3 className="mt-3 truncate text-lg font-semibold">
+                <p className="font-mono text-sm font-semibold">{plan.id}</p>
+                <p className="mt-1 truncate text-sm text-[var(--muted-foreground)]">
                   {plan.repository}
-                </h3>
-                <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--muted-foreground)]">
-                  {plan.summary}
                 </p>
-                <div className="mt-4 flex flex-wrap gap-3 text-sm text-[var(--muted-foreground)]">
-                  <span className="inline-flex items-center gap-2">
-                    <IoGitBranchOutline className="h-4 w-4" aria-hidden />
-                    {plan.branch}
-                  </span>
-                  <span className="inline-flex items-center gap-2">
-                    <IoPeopleOutline className="h-4 w-4" aria-hidden />
-                    {plan.owner}
-                  </span>
-                  <span className="inline-flex items-center gap-2">
-                    <IoMailUnreadOutline className="h-4 w-4" aria-hidden />
-                    {plan.channel}
-                  </span>
-                </div>
               </div>
-
-              <a
-                href={
-                  plan.risk === "low"
-                    ? `/actions/request-fix?planId=${encodeURIComponent(
-                        plan.id
-                      )}&risk=${plan.risk}`
-                    : "#policy"
-                }
-                className={`inline-flex h-11 items-center justify-center gap-2 rounded-[8px] px-4 text-sm font-semibold transition-colors duration-200 focus-visible:outline-2 focus-visible:outline-[var(--accent)] ${
-                  plan.risk === "low"
-                    ? "bg-[var(--accent)] text-[oklch(0.12_0.01_105)] hover:bg-[var(--accent-strong)]"
-                    : "border border-[var(--danger)] text-[var(--danger)] hover:bg-[oklch(0.24_0.04_25)]"
-                }`}
+              <span
+                className={`shrink-0 rounded-[8px] border px-2.5 py-1 text-xs font-semibold ${riskClass[plan.risk]}`}
               >
-                {plan.risk === "low" ? "Fix this error" : "Review gate"}
-                <IoArrowForward className="h-4 w-4" aria-hidden />
-              </a>
+                {plan.risk}
+              </span>
             </div>
+
+            <div className="mt-3 grid gap-2 text-sm">
+              <p>
+                <span className="font-semibold">{plan.failure}</span>
+                <span className="text-[var(--muted-foreground)]">
+                  {" "}
+                  · {plan.owner}
+                </span>
+              </p>
+              <p className="text-[var(--muted-foreground)]">{plan.memory}</p>
+              <p className="text-[var(--muted-foreground)]">{plan.route}</p>
+            </div>
+
+            <span
+              className={`mt-3 inline-flex rounded-[8px] border px-2.5 py-1 text-xs font-semibold ${stateClass[plan.state]}`}
+            >
+              {plan.nextAction}
+            </span>
           </article>
+        ))}
+      </div>
+
+      <div className="hidden overflow-x-auto md:block">
+        <table className="w-full min-w-[52rem] border-collapse text-left text-sm">
+          <thead className="bg-[var(--panel-raised)] text-xs uppercase text-[var(--muted-foreground)]">
+            <tr>
+              <th className="px-4 py-3 font-semibold">Plan</th>
+              <th className="px-4 py-3 font-semibold">Failure</th>
+              <th className="px-4 py-3 font-semibold">Memory</th>
+              <th className="px-4 py-3 font-semibold">Owner</th>
+              <th className="px-4 py-3 font-semibold">Route</th>
+              <th className="px-4 py-3 font-semibold">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {repairQueue.map((plan) => (
+              <tr
+                key={plan.id}
+                className="border-t border-[var(--panel-border)]"
+              >
+                <td className="px-4 py-4 align-top">
+                  <p className="font-mono font-semibold">{plan.id}</p>
+                  <p className="mt-1 max-w-[13rem] truncate text-[var(--muted-foreground)]">
+                    {plan.repository}
+                  </p>
+                </td>
+                <td className="px-4 py-4 align-top">
+                  <span
+                    className={`inline-flex rounded-[8px] border px-2.5 py-1 text-xs font-semibold ${riskClass[plan.risk]}`}
+                  >
+                    {plan.risk}
+                  </span>
+                  <p className="mt-2 font-semibold">{plan.failure}</p>
+                </td>
+                <td className="px-4 py-4 align-top text-[var(--muted-foreground)]">
+                  {plan.memory}
+                </td>
+                <td className="px-4 py-4 align-top">{plan.owner}</td>
+                <td className="px-4 py-4 align-top text-[var(--muted-foreground)]">
+                  {plan.route}
+                </td>
+                <td className="px-4 py-4 align-top">
+                  <span
+                    className={`inline-flex rounded-[8px] border px-2.5 py-1 text-xs font-semibold ${stateClass[plan.state]}`}
+                  >
+                    {plan.nextAction}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+function RoutingPanel() {
+  return (
+    <section
+      id="routes"
+      className="rounded-[8px] border border-[var(--panel-border)] bg-[var(--panel)] p-5"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold uppercase text-[var(--muted-foreground)]">
+            Routes
+          </p>
+          <h2 className="mt-2 text-xl font-semibold">Notify the right owner</h2>
+        </div>
+        <IoMailUnreadOutline
+          className="h-6 w-6 text-[var(--info)]"
+          aria-hidden
+        />
+      </div>
+
+      <div className="mt-5 divide-y divide-[var(--panel-border)]">
+        {routeStatuses.map((route) => (
+          <div
+            key={route.channel}
+            className="flex items-center justify-between gap-4 py-3"
+          >
+            <div>
+              <p className="font-semibold">{route.channel}</p>
+              <p className="mt-1 text-sm text-[var(--muted-foreground)]">
+                {route.destination}
+              </p>
+            </div>
+            <span className="rounded-[8px] border border-[var(--panel-border)] px-2.5 py-1 text-xs font-semibold text-[var(--muted-foreground)]">
+              {route.status}
+            </span>
+          </div>
         ))}
       </div>
     </section>
   );
 }
 
-function NotificationPanel() {
-  return (
-    <section
-      id="notifications"
-      className="rounded-[8px] border border-[var(--panel-border)] bg-[var(--panel)] p-5"
-    >
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-semibold">Notification routing</h2>
-          <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-            Actor-aware alerts for the person who pushed the change.
-          </p>
-        </div>
-        <IoNotificationsOutline
-          className="h-7 w-7 text-[var(--accent-strong)]"
-          aria-hidden
-        />
-      </div>
-
-      <div className="mt-6 space-y-4">
-        <div className="rounded-[8px] border border-[var(--panel-border)] bg-[var(--panel-raised)] p-4">
-          <p className="text-sm font-semibold">Slack card</p>
-          <p className="mt-2 text-sm leading-6 text-[var(--muted-foreground)]">
-            Build failure summary, risk, owner, and fix actions land in the
-            engineering channel.
-          </p>
-        </div>
-        <div className="rounded-[8px] border border-[var(--panel-border)] bg-[var(--panel-raised)] p-4">
-          <p className="text-sm font-semibold">Teams card</p>
-          <p className="mt-2 text-sm leading-6 text-[var(--muted-foreground)]">
-            Diagnosis, GitHub run, and fix request actions land in the team
-            channel.
-          </p>
-        </div>
-        <div className="rounded-[8px] border border-[var(--panel-border)] bg-[var(--panel-raised)] p-4">
-          <p className="text-sm font-semibold">Gmail fallback</p>
-          <p className="mt-2 text-sm leading-6 text-[var(--muted-foreground)]">
-            Commit author email is used when a GitHub login has no explicit
-            route.
-          </p>
-        </div>
-      </div>
-
-      <div className="mt-6 rounded-[8px] border border-[var(--warning)] bg-[oklch(0.24_0.045_75)] p-4">
-        <p className="flex items-center gap-2 text-sm font-semibold text-[var(--warning)]">
-          <IoAlertCircleOutline className="h-5 w-5" aria-hidden />
-          Confirmation required
-        </p>
-        <p className="mt-2 text-sm leading-6 text-[var(--muted-foreground)]">
-          Alert buttons open a signed confirmation route before worker handling.
-        </p>
-      </div>
-    </section>
-  );
-}
-
-function PipelineTimeline() {
+function CaseTimeline() {
   return (
     <section className="rounded-[8px] border border-[var(--panel-border)] bg-[var(--panel)] p-5">
-      <h2 className="text-xl font-semibold">Loop stages</h2>
-      <div className="mt-5 space-y-4">
-        {timeline.map((item) => {
-          const Icon = item.icon;
+      <p className="text-xs font-semibold uppercase text-[var(--muted-foreground)]">
+        Case timeline
+      </p>
+      <h2 className="mt-2 text-xl font-semibold">Current case timeline</h2>
 
-          return (
-            <article key={item.title} className="flex gap-4">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[8px] border border-[var(--panel-border)] bg-[var(--panel-raised)] text-[var(--accent-strong)]">
-                <Icon className="h-5 w-5" aria-hidden />
-              </span>
-              <div>
-                <h3 className="font-semibold">{item.title}</h3>
-                <p className="mt-1 text-sm leading-6 text-[var(--muted-foreground)]">
-                  {item.detail}
-                </p>
-              </div>
-            </article>
-          );
-        })}
+      <div className="mt-5 space-y-4">
+        {caseTimeline.map(([time, event, detail]) => (
+          <div
+            key={`${time}-${event}`}
+            className="grid grid-cols-[4rem_1fr] gap-3"
+          >
+            <span className="font-mono text-sm text-[var(--muted-foreground)]">
+              {time}
+            </span>
+            <div className="border-l border-[var(--panel-border)] pl-4">
+              <p className="font-mono text-sm font-semibold">{event}</p>
+              <p className="mt-1 text-sm leading-6 text-[var(--muted-foreground)]">
+                {detail}
+              </p>
+            </div>
+          </div>
+        ))}
       </div>
     </section>
   );
@@ -452,43 +541,43 @@ function PolicyPanel() {
     >
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-xl font-semibold">Repository policy</h2>
-          <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-            Controls that keep CI repair work bounded.
+          <p className="text-xs font-semibold uppercase text-[var(--muted-foreground)]">
+            Policy
           </p>
+          <h2 className="mt-2 text-xl font-semibold">Safety gates</h2>
         </div>
-        <span className="inline-flex w-fit items-center gap-2 rounded-[8px] border border-[var(--panel-border)] px-3 py-2 text-sm text-[var(--muted-foreground)]">
-          <IoShieldCheckmarkOutline className="h-5 w-5" aria-hidden />
+        <span className="inline-flex w-fit items-center gap-2 rounded-[8px] border border-[var(--panel-border)] px-3 py-2 text-sm font-semibold text-[var(--muted-foreground)]">
+          <IoShieldCheckmarkOutline className="h-4 w-4" aria-hidden />
           Enforced
         </span>
       </div>
 
       <div className="mt-5 overflow-hidden rounded-[8px] border border-[var(--panel-border)]">
-        <div className="hidden grid-cols-[0.85fr_1fr_1.25fr] border-b border-[var(--panel-border)] bg-[var(--panel-raised)] px-4 py-3 text-sm font-semibold md:grid">
-          <span>Control</span>
-          <span>Setting</span>
-          <span>Result</span>
-        </div>
-        {policyRows.map(([control, setting, result]) => (
-          <div
-            key={control}
-            className="grid gap-2 border-b border-[var(--panel-border)] px-4 py-4 text-sm last:border-b-0 md:grid-cols-[0.85fr_1fr_1.25fr] md:gap-3"
-          >
-            <span className="font-semibold">{control}</span>
-            <span className="text-[var(--muted-foreground)]">
-              <span className="font-semibold text-[var(--foreground)] md:hidden">
-                Setting:{" "}
-              </span>
-              {setting}
-            </span>
-            <span className="text-[var(--muted-foreground)]">
-              <span className="font-semibold text-[var(--foreground)] md:hidden">
-                Result:{" "}
-              </span>
-              {result}
-            </span>
-          </div>
-        ))}
+        <table className="w-full border-collapse text-left text-sm">
+          <thead className="bg-[var(--panel-raised)] text-xs uppercase text-[var(--muted-foreground)]">
+            <tr>
+              <th className="px-4 py-3 font-semibold">Control</th>
+              <th className="px-4 py-3 font-semibold">Setting</th>
+              <th className="px-4 py-3 font-semibold">Result</th>
+            </tr>
+          </thead>
+          <tbody>
+            {policyRows.map(([control, setting, result]) => (
+              <tr
+                key={control}
+                className="border-t border-[var(--panel-border)]"
+              >
+                <td className="px-4 py-3 font-semibold">{control}</td>
+                <td className="px-4 py-3 text-[var(--muted-foreground)]">
+                  {setting}
+                </td>
+                <td className="px-4 py-3 text-[var(--muted-foreground)]">
+                  {result}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </section>
   );
