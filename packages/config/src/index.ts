@@ -10,6 +10,7 @@ const envSchema = z.object({
   OPENAI_API_KEY: z.string().optional(),
   OPENAI_MODEL: z.string().default("gpt-5.5"),
   LOOPCI_POLICY_PATH: z.string().optional(),
+  LOOPCI_CODEOWNERS_PATH: z.string().optional(),
   LOOPCI_PUBLIC_URL: z.string().url().optional(),
   LOOPCI_NOTIFICATIONS_ENABLED: z
     .enum(["true", "false"])

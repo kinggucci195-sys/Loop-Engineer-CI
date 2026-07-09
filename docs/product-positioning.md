@@ -68,7 +68,7 @@ LoopCI does not start by asking a model to guess.
 The default classifier uses deterministic signals:
 
 - Failed step name and log excerpt.
-- Regex signatures for format, lint, typecheck, unit-test, dependency, workflow-config, secret/permission, and flaky/noisy failures.
+- Regex signatures for format, lint, typecheck, unit-test, integration-test, e2e-test, dependency, environment, workflow-config, secret/permission, and flaky/noisy failures.
 - File extraction from log paths such as `.ts`, `.tsx`, `.js`, `.json`, `.yaml`, and `.yml`.
 - Risk mapping that treats format and lint as low-risk, workflow and secret/permission failures as high-risk, and unknown or broader failures as review-gated.
 - Recommended checks mapped to the detected failure class, such as `npm run lint`, `npm run typecheck`, `npm test`, `npm ci`, or permission review.
@@ -142,7 +142,8 @@ LoopCI is designed for teams where AI should assist, not silently merge or deplo
 
 - GitHub PR comments with root cause, confidence, and suggested fix.
 - Jira and Linear ticket creation.
-- CODEOWNERS and `git blame` ownership routing.
+- CODEOWNERS ownership routing.
+- Optional `git blame` ownership routing.
 - Historical failure memory.
 - Flaky-test registry.
 

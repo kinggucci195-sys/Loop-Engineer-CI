@@ -17,6 +17,16 @@ const FAILURE_PATTERNS: Array<{
   checks: string[];
 }> = [
   {
+    kind: "flaky-or-noisy",
+    pattern:
+      /flaky|intermittent|random|timeout|timed out|connection reset|econnreset|socket hang up|rate limit|temporarily unavailable/i,
+    checks: [
+      "rerun failed job once",
+      "rerun the failed test in isolation",
+      "check flaky-test history before changing product code"
+    ]
+  },
+  {
     kind: "format",
     pattern: /prettier|format|formatted|formatting/i,
     checks: ["npm run format:check"]
@@ -28,18 +38,46 @@ const FAILURE_PATTERNS: Array<{
   },
   {
     kind: "typecheck",
-    pattern: /typescript|tsc|type error|is not assignable|cannot find name/i,
+    pattern:
+      /typescript|tsc|type error|is not assignable|cannot find name|compilation failed|compile error/i,
     checks: ["npm run typecheck"]
+  },
+  {
+    kind: "e2e-test",
+    pattern: /playwright|cypress|selenium|browser test|end-to-end|e2e/i,
+    checks: [
+      "rerun the failed e2e spec",
+      "capture browser trace or screenshot evidence"
+    ]
+  },
+  {
+    kind: "integration-test",
+    pattern:
+      /integration test|testcontainers|docker compose|service unavailable|econnrefused|database connection|redis|postgres/i,
+    checks: [
+      "rerun the integration test target",
+      "verify dependent services are healthy"
+    ]
   },
   {
     kind: "unit-test",
     pattern: /jest|expect\(|toBe|toEqual|test failed|assertion/i,
-    checks: ["npm test"]
+    checks: ["npm test", "rerun the failed test in isolation"]
   },
   {
     kind: "dependency",
-    pattern: /npm ci|eresolve|package-lock|dependency|peer dep/i,
+    pattern:
+      /npm ci|npm install|yarn install|pnpm install|eresolve|package-lock|lockfile|dependency|peer dep|cannot find module|module not found/i,
     checks: ["npm ci", "npm audit --audit-level=high"]
+  },
+  {
+    kind: "environment",
+    pattern:
+      /missing env|environment variable|node version|setup-node|command not found|not recognized as|enoent|path not found|port already in use/i,
+    checks: [
+      "verify CI environment variables",
+      "verify runner setup and tool versions"
+    ]
   },
   {
     kind: "workflow-config",
@@ -50,11 +88,6 @@ const FAILURE_PATTERNS: Array<{
     kind: "secret-or-permission",
     pattern: /permission|forbidden|unauthorized|secret|token|access denied/i,
     checks: ["review workflow permissions and secret scopes"]
-  },
-  {
-    kind: "flaky-or-noisy",
-    pattern: /timeout|timed out|connection reset|econnreset|rate limit/i,
-    checks: ["rerun failed job once", "check flaky-test registry"]
   }
 ];
 

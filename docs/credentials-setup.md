@@ -39,6 +39,14 @@ npm run dev:worker:env
 
 The orchestrator reads runtime credentials from environment variables through `packages/config`.
 
+Ownership can read a repository CODEOWNERS-style file when configured:
+
+```bash
+LOOPCI_CODEOWNERS_PATH=./.github/CODEOWNERS
+```
+
+If a classified failure contains likely files, LoopCI uses the last matching CODEOWNERS rule first. If no rule matches, it falls back to GitHub triggering actor, actor, then commit author email.
+
 The notification dispatcher reads actor routing from the file path set by:
 
 ```bash
@@ -176,13 +184,14 @@ LOOPCI_JIRA_ISSUE_TYPE=Bug
 
 For a repair plan, LoopCI uses:
 
-1. GitHub `triggeringActor`
-2. GitHub `actor`
-3. matching user route in `loopci.notifications.json`
-4. default Teams or Slack webhook
-5. configured user email
-6. commit author email fallback
-7. default alert email
+1. CODEOWNERS match from `LOOPCI_CODEOWNERS_PATH`
+2. GitHub `triggeringActor`
+3. GitHub `actor`
+4. matching user route in `loopci.notifications.json`
+5. default Teams or Slack webhook
+6. configured user email
+7. commit author email fallback
+8. default alert email
 
 ## Verify Setup
 

@@ -39,7 +39,7 @@ import {
 } from "./notifications/dispatcher";
 import { getNotificationIntegrationStatus } from "./notifications/notification-status";
 import {
-  createFallbackOwnershipResolver,
+  createOwnershipResolver,
   type OwnershipResolver
 } from "./ownership/ownership-resolver";
 import { verifyGitHubWebhookSignature } from "./security/github-signature";
@@ -72,7 +72,10 @@ export function buildServer(dependencies: ServerDependencies) {
       recordsPath: resolve(dependencies.env.STATE_DIR, "memory.jsonl")
     });
   const ownershipResolver =
-    dependencies.ownershipResolver ?? createFallbackOwnershipResolver();
+    dependencies.ownershipResolver ??
+    createOwnershipResolver({
+      codeownersPath: dependencies.env.LOOPCI_CODEOWNERS_PATH
+    });
 
   server.register(fastifyRawBody, {
     field: "rawBody",

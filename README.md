@@ -105,7 +105,7 @@ Workflow:
 - Deterministic failure classification with optional OpenAI classification.
 - Engineering Memory Engine v1 with exact "seen before" recognition.
 - Repair plans with likely owner, risk, confidence, evidence, and next action.
-- Actor-aware routing through `loopci.notifications.json`.
+- CODEOWNERS-aware ownership with actor routing through `loopci.notifications.json`.
 - Safe "Fix this error" confirmation route for low-risk repair work.
 
 Design principles:

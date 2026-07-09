@@ -50,6 +50,22 @@ function buildGoal(classification: FailureClassification): string {
     return "Make TypeScript checks pass with explicit types and no weakening of strictness.";
   }
 
+  if (classification.kind === "dependency") {
+    return "Restore dependency installation or resolution without widening package risk.";
+  }
+
+  if (classification.kind === "environment") {
+    return "Identify the missing runner, secret, or environment assumption before changing application code.";
+  }
+
+  if (
+    classification.kind === "unit-test" ||
+    classification.kind === "integration-test" ||
+    classification.kind === "e2e-test"
+  ) {
+    return "Reproduce the failed test signal, isolate whether it is product behavior or test instability, and propose the smallest safe repair.";
+  }
+
   if (classification.kind === "flaky-or-noisy") {
     return "Confirm whether the failure is flaky and propose quarantine or rerun policy evidence.";
   }
