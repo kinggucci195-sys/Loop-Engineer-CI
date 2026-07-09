@@ -149,6 +149,23 @@ Routing priority:
 4. Commit author email fallback.
 5. Default alert email.
 
+## Status API
+
+The dashboard reads `GET /integrations/status` from the orchestrator. This endpoint reports whether each outbound route can send without exposing webhook URLs, tokens, email addresses, or SMTP credentials.
+
+It returns:
+
+- whether notifications are globally enabled
+- whether the routing file path is set and loaded
+- how many actor routes are configured
+- Teams and Slack route source: environment, routing file, per-user route, or none
+- email readiness: SMTP configured plus recipient route or commit-author fallback
+- Jira readiness: issue creation enabled plus required Jira settings present
+
+The dashboard should treat this endpoint as the source of truth. It must not show Slack, Teams, email, or Jira as connected unless the orchestrator reports them as configured.
+
+For local credential setup, see [Credentials Setup](./credentials-setup.md).
+
 ## Product Direction
 
 Slack, Teams, email, and Jira are not the moat by themselves. They are the delivery layer.

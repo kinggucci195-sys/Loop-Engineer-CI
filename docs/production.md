@@ -35,6 +35,9 @@ The root repository is for the full monorepo and Docker services. Keep Vercel da
 - `LOOPCI_SLACK_WEBHOOK_URL`: optional Slack incoming webhook for repair-plan alerts.
 - `LOOPCI_JIRA_API_TOKEN`: optional Jira Cloud API token for creating repair-plan issues.
 - `LOOPCI_SMTP_PASSWORD`: optional SMTP or Gmail app password for email alerts.
+- `LOOPCI_API_TOKEN`: internal token for dashboard-to-orchestrator reads.
+- `LOOPCI_ALLOW_UNSIGNED_EVENTS=false`: keep unsigned manual event ingestion disabled in production.
+- `LOOPCI_OUTBOUND_TIMEOUT_MS=5000`: caps Slack, Teams, SMTP, and Jira delivery waits.
 
 Never commit `.env`, raw CI logs, private keys, tokens, or generated evidence that contains secrets.
 

@@ -1,5 +1,6 @@
 import type { RepairPlan } from "@loopci/contracts";
 import type { LoopCiEnv } from "@loopci/config";
+import { createOutboundAbortSignal } from "./outbound-timeout";
 import { getFixRequestUrl, getPlanUrl } from "./render";
 
 export async function sendTeamsRepairPlanNotification(
@@ -13,6 +14,7 @@ export async function sendTeamsRepairPlanNotification(
     headers: {
       "content-type": "application/json"
     },
+    signal: createOutboundAbortSignal(env),
     body: JSON.stringify({
       type: "message",
       attachments: [

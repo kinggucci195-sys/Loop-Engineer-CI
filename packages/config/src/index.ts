@@ -19,6 +19,16 @@ const envSchema = z.object({
     .enum(["true", "false"])
     .default("true")
     .transform((value) => value === "true"),
+  LOOPCI_API_TOKEN: z.string().min(16).optional(),
+  LOOPCI_ALLOW_UNSIGNED_EVENTS: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
+  LOOPCI_OUTBOUND_TIMEOUT_MS: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(5000),
   LOOPCI_NOTIFICATION_USERS_PATH: z.string().optional(),
   LOOPCI_TEAMS_WEBHOOK_URL: z.string().url().optional(),
   LOOPCI_SLACK_WEBHOOK_URL: z.string().url().optional(),

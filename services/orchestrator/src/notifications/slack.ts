@@ -1,5 +1,6 @@
 import type { RepairPlan } from "@loopci/contracts";
 import type { LoopCiEnv } from "@loopci/config";
+import { createOutboundAbortSignal } from "./outbound-timeout";
 import { getFixRequestUrl, getPlanUrl } from "./render";
 
 export async function sendSlackRepairPlanNotification(
@@ -14,6 +15,7 @@ export async function sendSlackRepairPlanNotification(
     headers: {
       "content-type": "application/json"
     },
+    signal: createOutboundAbortSignal(env),
     body: JSON.stringify({
       text: `LoopCI found a ${plan.classification.kind} failure in ${plan.event.repository}`,
       blocks: [
