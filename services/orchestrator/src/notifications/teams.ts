@@ -9,6 +9,8 @@ export async function sendTeamsRepairPlanNotification(
   env: LoopCiEnv
 ) {
   const actor = plan.event.triggeringActor ?? plan.event.actor ?? "unknown";
+  const owner = plan.ownership?.owner ?? actor;
+  const ownerSource = plan.ownership?.source ?? "actor";
   const response = await fetch(webhookUrl, {
     method: "POST",
     headers: {
@@ -43,6 +45,8 @@ export async function sendTeamsRepairPlanNotification(
                   { title: "Repository", value: plan.event.repository },
                   { title: "Branch", value: plan.event.branch },
                   { title: "Workflow", value: plan.event.workflow },
+                  { title: "Owner", value: owner },
+                  { title: "Owner source", value: ownerSource },
                   { title: "Triggered by", value: actor },
                   { title: "Risk", value: plan.classification.risk },
                   {

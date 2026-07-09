@@ -23,6 +23,12 @@ describe("Teams notifications", () => {
     );
 
     const body = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
+    expect(JSON.stringify(body.attachments[0].content.body)).toContain(
+      "platform-team"
+    );
+    expect(JSON.stringify(body.attachments[0].content.body)).toContain(
+      "codeowners"
+    );
     expect(body.attachments[0].content.actions).toEqual(
       expect.arrayContaining([
         expect.objectContaining({

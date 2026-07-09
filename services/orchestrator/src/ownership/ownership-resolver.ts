@@ -1,17 +1,11 @@
-import type { CiFailureEvent, FailureClassification } from "@loopci/contracts";
+import type {
+  CiFailureEvent,
+  FailureClassification,
+  OwnershipSnapshot
+} from "@loopci/contracts";
 import { readFile } from "node:fs/promises";
 
-export type OwnershipSource =
-  | "codeowners"
-  | "triggering-actor"
-  | "actor"
-  | "commit-author-email"
-  | "unknown";
-
-export interface OwnershipResolution {
-  owner?: string;
-  source: OwnershipSource;
-}
+export type OwnershipResolution = OwnershipSnapshot;
 
 export interface OwnershipResolver {
   resolve(

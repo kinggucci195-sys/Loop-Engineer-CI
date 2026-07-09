@@ -53,9 +53,23 @@ export const classificationSchema = z.object({
   rationale: z.string().min(1)
 });
 
+export const ownershipSourceSchema = z.enum([
+  "codeowners",
+  "triggering-actor",
+  "actor",
+  "commit-author-email",
+  "unknown"
+]);
+
+export const ownershipSnapshotSchema = z.object({
+  owner: z.string().min(1).optional(),
+  source: ownershipSourceSchema
+});
+
 export const repairPlanSchema = z.object({
   id: z.string().min(1),
   memoryRecordId: z.string().min(1).optional(),
+  ownership: ownershipSnapshotSchema.optional(),
   event: ciFailureEventSchema,
   classification: classificationSchema,
   status: z.enum([
@@ -83,6 +97,8 @@ export type FailureKind = z.infer<typeof failureKindSchema>;
 export type RiskLevel = z.infer<typeof riskLevelSchema>;
 export type CiFailureEvent = z.infer<typeof ciFailureEventSchema>;
 export type FailureClassification = z.infer<typeof classificationSchema>;
+export type OwnershipSource = z.infer<typeof ownershipSourceSchema>;
+export type OwnershipSnapshot = z.infer<typeof ownershipSnapshotSchema>;
 export type RepairPlan = z.infer<typeof repairPlanSchema>;
 
 export const evidenceBundleSchema = z.object({

@@ -9,6 +9,8 @@ export async function sendSlackRepairPlanNotification(
   env: LoopCiEnv
 ) {
   const actor = plan.event.triggeringActor ?? plan.event.actor ?? "unknown";
+  const owner = plan.ownership?.owner ?? actor;
+  const ownerSource = plan.ownership?.source ?? "actor";
   const confidence = `${Math.round(plan.classification.confidence * 100)}%`;
   const response = await fetch(webhookUrl, {
     method: "POST",
@@ -39,6 +41,8 @@ export async function sendSlackRepairPlanNotification(
           fields: [
             markdownField("Branch", plan.event.branch),
             markdownField("Workflow", plan.event.workflow),
+            markdownField("Owner", owner),
+            markdownField("Owner source", ownerSource),
             markdownField("Triggered by", actor),
             markdownField("Failure", plan.classification.kind),
             markdownField("Risk", plan.classification.risk),

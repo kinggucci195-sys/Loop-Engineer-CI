@@ -260,7 +260,7 @@ function CurrentFailure({
         </div>
       </div>
 
-      <div className="grid gap-0 md:grid-cols-3">
+      <div className="grid gap-0 md:grid-cols-2 xl:grid-cols-4">
         <FactBlock
           label="Seen before"
           value={memory ? `${memory.occurrenceCount} times` : "No match"}
@@ -269,6 +269,11 @@ function CurrentFailure({
               ? (memory.confidenceReasoning[0] ?? "Exact fingerprint memory")
               : "No memory record linked"
           }
+        />
+        <FactBlock
+          label="Owner"
+          value={plan.owner ?? memory?.owner ?? "Unresolved"}
+          detail={plan.ownershipSource ?? "fallback pending"}
         />
         <FactBlock
           label="Repository"

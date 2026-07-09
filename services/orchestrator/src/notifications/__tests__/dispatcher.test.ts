@@ -49,12 +49,43 @@ describe("notification routing", () => {
     );
   });
 
-  it("falls back to commit author email when no actor mapping exists", () => {
+  it("prefers the resolved owner route over the GitHub actor route", () => {
+    const config: NotificationConfig = {
+      ...createEmptyNotificationConfig(),
+      users: {
+        "platform-team": {
+          email: "platform@example.com",
+          slackWebhookUrl: "https://hooks.slack.com/services/platform"
+        },
+        "kinggucci195-sys": {
+          email: "actor@example.com",
+          slackWebhookUrl: "https://hooks.slack.com/services/actor"
+        }
+      }
+    };
+
     const target = resolveNotificationTarget(
-      createNotificationTestPlan({
-        actor: "unknown-dev",
-        commitAuthorEmail: "author@example.com"
-      }),
+      createNotificationTestPlan({ actor: "kinggucci195-sys" }),
+      config
+    );
+
+    expect(target.owner).toBe("platform-team");
+    expect(target.actor).toBe("kinggucci195-sys");
+    expect(target.emails).toEqual(["platform@example.com"]);
+    expect(target.user?.slackWebhookUrl).toBe(
+      "https://hooks.slack.com/services/platform"
+    );
+  });
+
+  it("falls back to commit author email when no actor mapping exists", () => {
+    const planWithoutOwnership = createNotificationTestPlan({
+      actor: "unknown-dev",
+      commitAuthorEmail: "author@example.com"
+    });
+    delete planWithoutOwnership.ownership;
+
+    const target = resolveNotificationTarget(
+      planWithoutOwnership,
       createEmptyNotificationConfig()
     );
 

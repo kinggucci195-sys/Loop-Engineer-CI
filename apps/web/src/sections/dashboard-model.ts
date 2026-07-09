@@ -16,6 +16,8 @@ export interface DashboardPlan {
   kind: string;
   summary: string;
   requiresHuman: boolean;
+  owner?: string;
+  ownershipSource?: string;
   memoryRecordId?: string;
 }
 
@@ -259,6 +261,7 @@ function toDashboardPlan(value: unknown): DashboardPlan | undefined {
     ? value.classification
     : {};
   const event = isRecord(value.event) ? value.event : {};
+  const ownership = isRecord(value.ownership) ? value.ownership : {};
   const risk = toRiskLevel(classification.risk);
 
   if (
@@ -297,6 +300,10 @@ function toDashboardPlan(value: unknown): DashboardPlan | undefined {
     kind: classification.kind,
     summary: classification.summary,
     requiresHuman: classification.requiresHuman,
+    ...(typeof ownership.owner === "string" ? { owner: ownership.owner } : {}),
+    ...(typeof ownership.source === "string"
+      ? { ownershipSource: ownership.source }
+      : {}),
     ...(typeof value.memoryRecordId === "string"
       ? { memoryRecordId: value.memoryRecordId }
       : {})

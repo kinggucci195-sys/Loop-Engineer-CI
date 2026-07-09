@@ -40,6 +40,7 @@ import {
 import { getNotificationIntegrationStatus } from "./notifications/notification-status";
 import {
   createOwnershipResolver,
+  type OwnershipResolution,
   type OwnershipResolver
 } from "./ownership/ownership-resolver";
 import { verifyGitHubWebhookSignature } from "./security/github-signature";
@@ -365,12 +366,17 @@ export function buildServer(dependencies: ServerDependencies) {
       policy
     );
     timingsMs.classification = durationSince(classificationStart);
-    let plan = createRepairPlan(policyEvent, classification);
+    const ownership = await ownershipResolver.resolve(
+      policyEvent,
+      classification
+    );
+    let plan = createRepairPlan(policyEvent, classification, ownership);
     const memoryStart = performance.now();
     const memoryResult = await recordEngineeringMemory(
       policyEvent,
       classification,
-      plan
+      plan,
+      ownership
     );
     timingsMs.memory = durationSince(memoryStart);
     const recognition = memoryResult?.recognition ?? null;
@@ -396,6 +402,7 @@ export function buildServer(dependencies: ServerDependencies) {
         repository: policyEvent.repository,
         kind: classification.kind,
         risk: classification.risk,
+        ownership,
         recognition,
         timingsMs
       },
@@ -418,7 +425,8 @@ export function buildServer(dependencies: ServerDependencies) {
   async function recordEngineeringMemory(
     event: CiFailureEvent,
     classification: FailureClassification,
-    plan: RepairPlan
+    plan: RepairPlan,
+    ownership: OwnershipResolution
   ): Promise<{
     memoryRecordId: string;
     recognition: EngineeringRecognitionSummary;
@@ -428,7 +436,6 @@ export function buildServer(dependencies: ServerDependencies) {
     }
 
     const fingerprint = createFailureFingerprint(event, classification);
-    const ownership = await ownershipResolver.resolve(event, classification);
     const failureObservedEvent = createFailureObservedEvent(
       plan,
       fingerprint,

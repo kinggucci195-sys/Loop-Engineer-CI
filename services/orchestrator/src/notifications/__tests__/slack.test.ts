@@ -24,6 +24,8 @@ describe("Slack notifications", () => {
 
     const body = JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body));
     expect(body.text).toContain("typecheck failure");
+    expect(JSON.stringify(body.blocks)).toContain("platform-team");
+    expect(JSON.stringify(body.blocks)).toContain("codeowners");
     expect(body.blocks).toEqual(
       expect.arrayContaining([
         expect.objectContaining({

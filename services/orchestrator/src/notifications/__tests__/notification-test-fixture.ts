@@ -5,6 +5,10 @@ export function createNotificationTestPlan(
 ): RepairPlan {
   return {
     id: "plan-1",
+    ownership: {
+      owner: "platform-team",
+      source: "codeowners"
+    },
     event: {
       provider: "github-actions",
       repository: "kinggucci195-sys/loopci",

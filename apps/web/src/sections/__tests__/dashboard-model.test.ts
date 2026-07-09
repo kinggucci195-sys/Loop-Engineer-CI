@@ -61,6 +61,10 @@ describe("dashboard model", () => {
                   summary: "Unit tests failed.",
                   requiresHuman: false
                 },
+                ownership: {
+                  owner: "platform",
+                  source: "codeowners"
+                },
                 status: "classified",
                 branchName: "loopci/repair-plan-1",
                 goal: "Repair the failing unit test.",
@@ -143,6 +147,10 @@ describe("dashboard model", () => {
     );
     expect(state.connected).toBe(true);
     expect(state.plans).toHaveLength(1);
+    expect(state.plans[0]).toMatchObject({
+      owner: "platform",
+      ownershipSource: "codeowners"
+    });
     expect(state.memory).toHaveLength(1);
     expect(state.integrations?.channels).toEqual([
       {

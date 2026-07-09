@@ -173,7 +173,7 @@ Slack, Teams, email, and Jira are not the moat by themselves. They are the deliv
 The product value is the loop around them:
 
 - Policy decides what is safe.
-- Ownership decides who sees it.
+- Ownership decides who sees it. LoopCI prefers the resolved plan owner from CODEOWNERS when available, then falls back to GitHub actor and commit-author routing.
 - Evidence decides whether a fix is reviewable.
 - History decides whether this is a repeated failure.
 - Human approval decides whether code changes.

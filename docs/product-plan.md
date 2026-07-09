@@ -57,7 +57,8 @@ Success metric: the PR page explains the failure better than the raw Actions UI.
 Route failures to the person or team most likely to fix them.
 
 - Read CODEOWNERS.
-- Use commit author and triggering actor as initial signals.
+- Prefer the resolved owner when routing Slack, Teams, and email notifications.
+- Use commit author and triggering actor as fallback signals.
 - Add optional `git blame` ownership for likely files.
 - Support team aliases in `loopci.notifications.json`.
 - Record why an owner was selected.

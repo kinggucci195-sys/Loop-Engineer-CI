@@ -1,6 +1,7 @@
 import type {
   CiFailureEvent,
   FailureClassification,
+  OwnershipSnapshot,
   RepairPlan
 } from "@loopci/contracts";
 
@@ -14,7 +15,8 @@ function slugify(value: string): string {
 
 export function createRepairPlan(
   event: CiFailureEvent,
-  classification: FailureClassification
+  classification: FailureClassification,
+  ownership?: OwnershipSnapshot
 ): RepairPlan {
   const safeSlug = slugify(
     `${classification.kind}-${event.failedJob}-${event.runId}`
@@ -26,6 +28,7 @@ export function createRepairPlan(
     id: `plan-${event.runId}-${Date.now()}`,
     event,
     classification,
+    ...(ownership ? { ownership } : {}),
     status: humanRequired ? "blocked" : "queued",
     branchName: `loopci/${safeSlug}`,
     goal: buildGoal(classification),

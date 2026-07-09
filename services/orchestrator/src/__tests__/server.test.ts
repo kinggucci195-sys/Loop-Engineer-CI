@@ -70,6 +70,10 @@ describe("orchestrator server", () => {
       })
     );
     expect(response.json().plan.memoryRecordId).toBeDefined();
+    expect(response.json().plan.ownership).toEqual({
+      owner: "kinggucci195-sys",
+      source: "actor"
+    });
     expect(await memoryStore.listEvents()).toHaveLength(1);
     expect(await memoryStore.listRecords()).toHaveLength(1);
     expect((await memoryStore.listEvents()).map((event) => event.type)).toEqual(

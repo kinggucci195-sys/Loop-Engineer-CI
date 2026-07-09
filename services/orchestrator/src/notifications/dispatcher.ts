@@ -70,11 +70,13 @@ export function resolveNotificationTarget(
   config: NotificationConfig
 ): {
   actor: string | undefined;
+  owner: string | undefined;
   user: NotificationUser | undefined;
   emails: string[];
 } {
+  const owner = plan.ownership?.owner;
   const actor = plan.event.triggeringActor ?? plan.event.actor;
-  const user = findUser(actor, config);
+  const user = findUser(owner, config) ?? findUser(actor, config);
   const emails = new Set<string>(config.defaultEmails);
 
   if (user?.email) {
@@ -88,6 +90,7 @@ export function resolveNotificationTarget(
 
   return {
     actor,
+    owner,
     user,
     emails: [...emails]
   };
