@@ -326,6 +326,18 @@ describe("orchestrator server", () => {
       url: "/webhooks/github",
       headers: {
         "content-type": "application/json",
+        "x-github-delivery": "delivery-2002",
+        "x-github-event": "workflow_run",
+        "x-hub-signature-256": signGitHubWebhookBody(payload, secret)
+      },
+      payload
+    });
+    const duplicate = await server.inject({
+      method: "POST",
+      url: "/webhooks/github",
+      headers: {
+        "content-type": "application/json",
+        "x-github-delivery": "delivery-2002",
         "x-github-event": "workflow_run",
         "x-hub-signature-256": signGitHubWebhookBody(payload, secret)
       },
@@ -333,6 +345,12 @@ describe("orchestrator server", () => {
     });
 
     expect(response.statusCode).toBe(202);
+    expect(duplicate.statusCode).toBe(202);
+    expect(duplicate.json()).toMatchObject({
+      accepted: false,
+      reason: "duplicate-github-delivery",
+      deliveryId: "delivery-2002"
+    });
     expect(response.json()).toMatchObject({
       accepted: true,
       plan: {
@@ -346,6 +364,20 @@ describe("orchestrator server", () => {
       }
     });
     expect(notifyRepairPlan).toHaveBeenCalledTimes(1);
+
+    const metrics = await server.inject({
+      method: "GET",
+      url: "/operations/metrics"
+    });
+
+    expect(metrics.statusCode).toBe(200);
+    expect(metrics.json()).toMatchObject({
+      webhooks: {
+        totalDeliveries: 1,
+        processed: 1,
+        duplicateSuppressed: 1
+      }
+    });
   });
 
   it("queues a low-risk fix request from an action endpoint", async () => {

@@ -115,6 +115,7 @@ export function createFallbackOwnershipResolver(): OwnershipResolver {
 export function parseCodeowners(contents: string): CodeownersRule[] {
   return contents
     .split(/\r?\n/)
+    .map(stripInlineComment)
     .map((line) => line.trim())
     .filter((line) => line && !line.startsWith("#"))
     .map((line) => line.split(/\s+/))
@@ -165,12 +166,15 @@ function matchesCodeownersPattern(pattern: string, file: string): boolean {
   }
 
   const regex = new RegExp(
-    `^${rootlessPattern
-      .split("*")
-      .map(escapeRegExp)
-      .join("[^/]*")}$`
+    rootlessPattern.includes("/")
+      ? `^${globToRegexSource(rootlessPattern)}$`
+      : `(^|/)${globToRegexSource(rootlessPattern)}$`
   );
   return regex.test(normalizedFile);
+}
+
+function stripInlineComment(line: string): string {
+  return line.replace(/\s+#.*$/, "");
 }
 
 function normalizeOwner(owner: string): string {
@@ -179,4 +183,24 @@ function normalizeOwner(owner: string): string {
 
 function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function globToRegexSource(pattern: string): string {
+  let source = "";
+
+  for (let index = 0; index < pattern.length; index += 1) {
+    const char = pattern[index];
+    const next = pattern[index + 1];
+
+    if (char === "*" && next === "*") {
+      source += ".*";
+      index += 1;
+    } else if (char === "*") {
+      source += "[^/]*";
+    } else {
+      source += escapeRegExp(char ?? "");
+    }
+  }
+
+  return source;
 }

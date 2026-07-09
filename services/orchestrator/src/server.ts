@@ -45,6 +45,11 @@ import {
 } from "./ownership/ownership-resolver";
 import { verifyGitHubWebhookSignature } from "./security/github-signature";
 import type { PlanStore } from "./state/plan-store";
+import {
+  createDeliveryIdFromPayload,
+  createJsonlWebhookDeliveryStore,
+  type WebhookDeliveryStore
+} from "./webhooks/delivery-store";
 import { createCiFailureEventFromGitHubWebhook } from "./webhooks/github";
 
 export interface ServerDependencies {
@@ -55,6 +60,7 @@ export interface ServerDependencies {
   notificationDispatcher?: NotificationDispatcher;
   memoryStore?: MemoryStore;
   ownershipResolver?: OwnershipResolver;
+  webhookDeliveryStore?: WebhookDeliveryStore;
 }
 
 export function buildServer(dependencies: ServerDependencies) {
@@ -76,6 +82,18 @@ export function buildServer(dependencies: ServerDependencies) {
     dependencies.ownershipResolver ??
     createOwnershipResolver({
       codeownersPath: dependencies.env.LOOPCI_CODEOWNERS_PATH
+    });
+  const webhookDeliveryStore =
+    dependencies.webhookDeliveryStore ??
+    createJsonlWebhookDeliveryStore({
+      deliveriesPath: resolve(
+        dependencies.env.STATE_DIR,
+        "webhook-deliveries.jsonl"
+      ),
+      deadLetterPath: resolve(
+        dependencies.env.STATE_DIR,
+        "webhook-dead-letter.jsonl"
+      )
     });
 
   server.register(fastifyRawBody, {
@@ -131,6 +149,41 @@ export function buildServer(dependencies: ServerDependencies) {
       }
 
       return getNotificationIntegrationStatus(dependencies.env);
+    });
+
+    server.get("/operations/metrics", async (request, reply) => {
+      if (!authorizeInternalRequest(request, reply)) {
+        return reply;
+      }
+
+      const [plans, memoryRecords, webhookDeliveries] = await Promise.all([
+        dependencies.planStore.list(),
+        memoryStore.listRecords(),
+        webhookDeliveryStore.summarize()
+      ]);
+
+      return {
+        service: "loopci-orchestrator",
+        generatedAt: new Date().toISOString(),
+        sloTargets: {
+          webhookSuccessRate: ">= 99%",
+          processingLatencyP95Ms: "<= 2000",
+          deadLetterRate: "<= 0.3%"
+        },
+        webhooks: webhookDeliveries,
+        plans: {
+          total: plans.length,
+          open: plans.filter((plan) => plan.status !== "closed").length,
+          blocked: plans.filter((plan) => plan.status === "blocked").length,
+          queued: plans.filter((plan) => plan.status === "queued").length
+        },
+        memory: {
+          records: memoryRecords.length,
+          recurring: memoryRecords.filter(
+            (record) => record.occurrenceCount >= 3
+          ).length
+        }
+      };
     });
 
     server.get("/memory", async (request, reply) => {
@@ -293,6 +346,12 @@ export function buildServer(dependencies: ServerDependencies) {
       "/webhooks/github",
       { config: { rawBody: true } },
       async (request, reply) => {
+        const webhookStart = performance.now();
+        const deliveryId = createDeliveryIdFromPayload({
+          deliveryId: request.headers["x-github-delivery"],
+          rawBody: request.rawBody
+        });
+        const eventName = headerValue(request.headers["x-github-event"]);
         const signatureValid = verifyGitHubWebhookSignature(
           request.rawBody,
           request.headers["x-hub-signature-256"],
@@ -306,26 +365,58 @@ export function buildServer(dependencies: ServerDependencies) {
           });
         }
 
-        const event = createCiFailureEventFromGitHubWebhook(
-          request.headers["x-github-event"],
-          request.body
-        );
+        const delivery = await webhookDeliveryStore.begin({
+          sourceDeliveryId: deliveryId,
+          ...(eventName ? { eventName } : {})
+        });
 
-        if (!event) {
+        if (delivery.duplicate) {
           return reply.code(202).send({
             accepted: false,
-            reason: "ignored-github-event"
+            reason: "duplicate-github-delivery",
+            deliveryId
           });
         }
 
-        return acceptFailureEvent(event, reply);
+        try {
+          const event = createCiFailureEventFromGitHubWebhook(
+            request.headers["x-github-event"],
+            request.body
+          );
+
+          if (!event) {
+            await webhookDeliveryStore.markIgnored(deliveryId, {
+              reason: "ignored-github-event",
+              latencyMs: durationSince(webhookStart)
+            });
+
+            return reply.code(202).send({
+              accepted: false,
+              reason: "ignored-github-event",
+              deliveryId
+            });
+          }
+
+          return acceptFailureEvent(event, reply, async () => {
+            await webhookDeliveryStore.markProcessed(deliveryId, {
+              latencyMs: durationSince(webhookStart)
+            });
+          });
+        } catch (error) {
+          await webhookDeliveryStore.markFailed(deliveryId, {
+            reason: error instanceof Error ? error.message : "unknown-error",
+            latencyMs: durationSince(webhookStart)
+          });
+          throw error;
+        }
       }
     );
   });
 
   async function acceptFailureEvent(
     event: CiFailureEvent,
-    reply: FastifyReply
+    reply: FastifyReply,
+    beforeSend?: () => Promise<void>
   ) {
     const timingsMs: Record<string, number> = {};
     const totalStart = performance.now();
@@ -408,6 +499,8 @@ export function buildServer(dependencies: ServerDependencies) {
       },
       "Created repair plan"
     );
+
+    await beforeSend?.();
 
     return reply.code(202).send({
       accepted: true,
@@ -539,6 +632,10 @@ export function buildServer(dependencies: ServerDependencies) {
 
 function durationSince(start: number): number {
   return Math.round((performance.now() - start) * 100) / 100;
+}
+
+function headerValue(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
 }
 
 function renderActionPage(input: { title: string; body: string }) {

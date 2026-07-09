@@ -130,6 +130,50 @@ services/orchestrator/src/server.ts @runtime
     });
   });
 
+  it("matches nested CODEOWNERS wildcards and strips inline comments", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "loopci-codeowners-"));
+    const codeownersPath = join(directory, "CODEOWNERS");
+    await writeFile(
+      codeownersPath,
+      `
+*.ts @typescript # all TypeScript files
+apps/**/route.ts @app-router
+apps/web/src/app/** @web-platform
+`
+    );
+
+    const resolver = createCodeownersOwnershipResolver({
+      codeownersPath,
+      fallback: createFallbackOwnershipResolver()
+    });
+
+    await expect(
+      resolver.resolve(
+        event,
+        {
+          ...classification,
+          likelyFiles: ["apps/web/src/app/actions/request-fix/route.ts"]
+        }
+      )
+    ).resolves.toEqual({
+      owner: "web-platform",
+      source: "codeowners"
+    });
+
+    await expect(
+      resolver.resolve(
+        event,
+        {
+          ...classification,
+          likelyFiles: ["packages/contracts/src/index.ts"]
+        }
+      )
+    ).resolves.toEqual({
+      owner: "typescript",
+      source: "codeowners"
+    });
+  });
+
   it("falls back when CODEOWNERS does not match likely files", async () => {
     const directory = await mkdtemp(join(tmpdir(), "loopci-codeowners-"));
     const codeownersPath = join(directory, "CODEOWNERS");

@@ -106,6 +106,7 @@ Workflow:
 - Engineering Memory Engine v1 with exact "seen before" recognition.
 - Repair plans with likely owner, risk, confidence, evidence, and next action.
 - CODEOWNERS-aware ownership with actor routing through `loopci.notifications.json`.
+- Webhook delivery ledger with duplicate suppression, dead-letter records, and protected operational metrics.
 - Safe "Fix this error" confirmation route for low-risk repair work.
 
 Design principles:

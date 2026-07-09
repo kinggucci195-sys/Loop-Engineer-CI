@@ -48,11 +48,30 @@ Expose only the orchestrator through HTTPS. Keep the worker private. Recommended
 - `GET /health`: liveness.
 - `GET /ready`: readiness, including state-store access.
 - `GET /plans/:planId`: repair-plan detail for alert links.
+- `GET /operations/metrics`: protected operational metrics for webhook delivery, plan queue state, and memory counts.
 - `GET /actions/plans/:planId/request-fix`: safe confirmation page for alert buttons.
 - `POST /webhooks/github`: signed webhook ingestion.
 - `POST /actions/plans/:planId/request-fix`: queues a low-risk plan for worker evidence.
 
 Use a reverse proxy, managed load balancer, or platform router that enforces TLS and request size limits.
+
+## Webhook Delivery Ledger
+
+Signed GitHub webhooks are tracked by `X-GitHub-Delivery` in `STATE_DIR`:
+
+- `webhook-deliveries.jsonl`: delivery state transitions.
+- `webhook-dead-letter.jsonl`: deliveries that failed after signature verification.
+
+Repeated GitHub deliveries with the same delivery id are suppressed after a delivery is processed or ignored. Missing delivery ids fall back to a stable SHA-256 hash of the raw body.
+
+Check operational counters with:
+
+```bash
+curl -H "Authorization: Bearer $LOOPCI_API_TOKEN" \
+  https://your-loopci.example.com/operations/metrics
+```
+
+The response includes delivery counts, duplicate suppression, dead-letter count, processed webhook p95 latency, open plan counts, and recurring memory counts. Treat this as v1 operational visibility; move to Prometheus/OpenTelemetry before high-volume production.
 
 ## Notifications
 
@@ -98,6 +117,7 @@ Before broader adoption:
 
 1. Replace JSONL storage with Postgres and row-level claiming.
 2. Add GitHub App authentication for fetching job logs and creating PR comments.
-3. Add per-tenant API keys or GitHub App installation checks.
-4. Add OpenTelemetry traces and metrics for webhook volume, classification latency, plan queue age, and worker outcomes.
-5. Add backup and retention policies for plan and evidence data.
+3. Add a durable queue and retry worker for webhook processing under storm conditions.
+4. Add per-tenant API keys or GitHub App installation checks.
+5. Add OpenTelemetry traces and metrics for webhook volume, classification latency, plan queue age, and worker outcomes.
+6. Add backup and retention policies for plan and evidence data.

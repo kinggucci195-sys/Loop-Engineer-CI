@@ -66,6 +66,7 @@ Protected when `LOOPCI_API_TOKEN` is set:
 - `GET /memory`
 - `GET /memory/:id`
 - `GET /integrations/status`
+- `GET /operations/metrics`
 
 Do not prefix this value with `NEXT_PUBLIC_`; that would expose it to the browser.
 
