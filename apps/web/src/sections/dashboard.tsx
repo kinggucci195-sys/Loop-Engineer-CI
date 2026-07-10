@@ -3,7 +3,6 @@ import {
   IoAlertCircleOutline,
   IoArrowForward,
   IoCheckmarkCircleOutline,
-  IoCodeSlashOutline,
   IoGitBranchOutline,
   IoLogoGithub,
   IoPulseOutline,
@@ -84,7 +83,7 @@ function SideNav() {
           aria-label="LoopCI overview"
         >
           <span className="flex h-9 w-9 items-center justify-center rounded-[8px] border border-white/10 bg-white/10 text-white">
-            <IoCodeSlashOutline className="h-5 w-5" aria-hidden />
+            <LoopCiMark className="h-6 w-6" />
           </span>
           <span>
             <span className="block text-base font-semibold">LoopCI</span>
@@ -122,6 +121,38 @@ function SideNav() {
         </p>
       </div>
     </aside>
+  );
+}
+
+function LoopCiMark({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 32 32"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M10.2 17.6c-2.6 0-4.7-1.9-4.7-4.4s2.1-4.4 4.7-4.4h5.1c2.4 0 4.4 1.8 4.4 4.1"
+        stroke="currentColor"
+        strokeWidth="2.4"
+        strokeLinecap="round"
+      />
+      <path
+        d="M21.8 14.4c2.6 0 4.7 1.9 4.7 4.4s-2.1 4.4-4.7 4.4h-5.1c-2.4 0-4.4-1.8-4.4-4.1"
+        stroke="currentColor"
+        strokeWidth="2.4"
+        strokeLinecap="round"
+      />
+      <path
+        d="m13.1 16.4 2.1 2.1 4.4-5"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="24.4" cy="7.6" r="2.2" fill="currentColor" />
+    </svg>
   );
 }
 
