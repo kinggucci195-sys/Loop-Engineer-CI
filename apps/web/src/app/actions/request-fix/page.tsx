@@ -37,7 +37,7 @@ export default async function RequestFixPage({
           Back to dashboard
         </Link>
 
-        <div className="mt-8 flex h-12 w-12 items-center justify-center rounded-[8px] border border-[var(--accent)] bg-[oklch(0.23_0.05_151)] text-[var(--accent-strong)]">
+        <div className="mt-8 flex h-12 w-12 items-center justify-center rounded-[8px] border border-[var(--accent)] bg-[var(--accent-surface)] text-[var(--accent-strong)]">
           <IoGitPullRequestOutline className="h-6 w-6" aria-hidden />
         </div>
 
@@ -80,7 +80,7 @@ export default async function RequestFixPage({
           {canRequest && actionUrl ? (
             <a
               href={actionUrl}
-              className="inline-flex h-11 items-center justify-center rounded-[8px] bg-[var(--accent)] px-4 text-sm font-semibold text-[oklch(0.12_0.01_105)] transition-colors duration-200 hover:bg-[var(--accent-strong)] focus-visible:outline-2 focus-visible:outline-[var(--accent-strong)]"
+              className="inline-flex h-11 items-center justify-center rounded-[8px] bg-[var(--accent)] px-4 text-sm font-semibold text-white transition-colors duration-200 hover:bg-[var(--accent-strong)] focus-visible:outline-2 focus-visible:outline-[var(--accent-strong)]"
             >
               Request draft repair PR
             </a>

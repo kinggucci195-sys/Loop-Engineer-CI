@@ -2,7 +2,7 @@ import { buildServer } from "../server";
 import { createJsonlPlanStore } from "../state/plan-store";
 import { createHeuristicClassifier } from "../ai/classifier";
 import { loadEnv } from "@loopci/config";
-import { mkdtemp } from "node:fs/promises";
+import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { signGitHubWebhookBody } from "../security/github-signature";
@@ -59,7 +59,21 @@ describe("orchestrator server", () => {
       recognitionType: "exact-fingerprint",
       occurrenceCount: 1
     });
+    expect(response.json().timingsMs).toEqual(
+      expect.objectContaining({
+        policy: expect.any(Number),
+        classification: expect.any(Number),
+        memory: expect.any(Number),
+        planStore: expect.any(Number),
+        notifications: expect.any(Number),
+        total: expect.any(Number)
+      })
+    );
     expect(response.json().plan.memoryRecordId).toBeDefined();
+    expect(response.json().plan.ownership).toEqual({
+      owner: "kinggucci195-sys",
+      source: "actor"
+    });
     expect(await memoryStore.listEvents()).toHaveLength(1);
     expect(await memoryStore.listRecords()).toHaveLength(1);
     expect((await memoryStore.listEvents()).map((event) => event.type)).toEqual(
@@ -133,6 +147,130 @@ describe("orchestrator server", () => {
     });
   });
 
+  it("returns redacted notification integration status", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "loopci-"));
+    const routingPath = join(dir, "loopci.notifications.json");
+    await writeFile(
+      routingPath,
+      JSON.stringify({
+        users: {
+          "kinggucci195-sys": {
+            teamsWebhookUrl: "https://teams.example.com/developer"
+          }
+        }
+      }),
+      "utf8"
+    );
+    const server = buildServer({
+      env: loadEnv({
+        NODE_ENV: "test",
+        STATE_DIR: dir,
+        LOOPCI_NOTIFICATION_USERS_PATH: routingPath,
+        LOOPCI_JIRA_CREATE_ISSUES: "true",
+        LOOPCI_JIRA_BASE_URL: "https://example.atlassian.net",
+        LOOPCI_JIRA_EMAIL: "loopci@example.com",
+        LOOPCI_JIRA_API_TOKEN: "secret-token",
+        LOOPCI_JIRA_PROJECT_KEY: "ENG"
+      }),
+      classifier: createHeuristicClassifier(),
+      planStore: createJsonlPlanStore(join(dir, "plans.jsonl")),
+      memoryStore: createMemoryStore(dir)
+    });
+
+    const response = await server.inject({
+      method: "GET",
+      url: "/integrations/status"
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      notificationsEnabled: true,
+      routingConfigLoaded: true,
+      usersConfigured: 1,
+      channels: {
+        teams: {
+          configured: true,
+          source: "per-user",
+          userRoutes: 1
+        },
+        jira: {
+          configured: true,
+          createIssues: true,
+          projectKeyConfigured: true
+        }
+      }
+    });
+    expect(response.body).not.toContain("secret-token");
+    expect(response.body).not.toContain("teams.example.com");
+  });
+
+  it("protects internal read endpoints when an API token is configured", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "loopci-"));
+    const server = buildServer({
+      env: loadEnv({
+        NODE_ENV: "test",
+        STATE_DIR: dir,
+        LOOPCI_API_TOKEN: "super-secret-token"
+      }),
+      classifier: createHeuristicClassifier(),
+      planStore: createJsonlPlanStore(join(dir, "plans.jsonl")),
+      memoryStore: createMemoryStore(dir)
+    });
+
+    const unauthorized = await server.inject({
+      method: "GET",
+      url: "/plans"
+    });
+    const authorized = await server.inject({
+      method: "GET",
+      url: "/plans",
+      headers: {
+        authorization: "Bearer super-secret-token"
+      }
+    });
+
+    expect(unauthorized.statusCode).toBe(401);
+    expect(authorized.statusCode).toBe(200);
+    expect(authorized.json()).toEqual({ plans: [] });
+  });
+
+  it("disables unsigned failure ingestion in production unless authorized", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "loopci-"));
+    const server = buildServer({
+      env: loadEnv({
+        NODE_ENV: "production",
+        STATE_DIR: dir,
+        LOOPCI_API_TOKEN: "super-secret-token"
+      }),
+      classifier: createHeuristicClassifier(),
+      planStore: createJsonlPlanStore(join(dir, "plans.jsonl")),
+      memoryStore: createMemoryStore(dir),
+      notificationDispatcher: {
+        notifyRepairPlan: jest.fn()
+      }
+    });
+
+    const unsigned = await server.inject({
+      method: "POST",
+      url: "/events/github-actions/failure",
+      payload: createFailurePayload("unsigned-prod")
+    });
+    const authorized = await server.inject({
+      method: "POST",
+      url: "/events/github-actions/failure",
+      headers: {
+        authorization: "Bearer super-secret-token"
+      },
+      payload: createFailurePayload("authorized-prod")
+    });
+
+    expect(unsigned.statusCode).toBe(404);
+    expect(unsigned.json()).toMatchObject({
+      reason: "unsigned-event-endpoint-disabled"
+    });
+    expect(authorized.statusCode).toBe(202);
+  });
+
   it("accepts signed GitHub workflow_run failure webhooks", async () => {
     const dir = await mkdtemp(join(tmpdir(), "loopci-"));
     const secret = "test-secret";
@@ -188,6 +326,18 @@ describe("orchestrator server", () => {
       url: "/webhooks/github",
       headers: {
         "content-type": "application/json",
+        "x-github-delivery": "delivery-2002",
+        "x-github-event": "workflow_run",
+        "x-hub-signature-256": signGitHubWebhookBody(payload, secret)
+      },
+      payload
+    });
+    const duplicate = await server.inject({
+      method: "POST",
+      url: "/webhooks/github",
+      headers: {
+        "content-type": "application/json",
+        "x-github-delivery": "delivery-2002",
         "x-github-event": "workflow_run",
         "x-hub-signature-256": signGitHubWebhookBody(payload, secret)
       },
@@ -195,6 +345,12 @@ describe("orchestrator server", () => {
     });
 
     expect(response.statusCode).toBe(202);
+    expect(duplicate.statusCode).toBe(202);
+    expect(duplicate.json()).toMatchObject({
+      accepted: false,
+      reason: "duplicate-github-delivery",
+      deliveryId: "delivery-2002"
+    });
     expect(response.json()).toMatchObject({
       accepted: true,
       plan: {
@@ -208,6 +364,20 @@ describe("orchestrator server", () => {
       }
     });
     expect(notifyRepairPlan).toHaveBeenCalledTimes(1);
+
+    const metrics = await server.inject({
+      method: "GET",
+      url: "/operations/metrics"
+    });
+
+    expect(metrics.statusCode).toBe(200);
+    expect(metrics.json()).toMatchObject({
+      webhooks: {
+        totalDeliveries: 1,
+        processed: 1,
+        duplicateSuppressed: 1
+      }
+    });
   });
 
   it("queues a low-risk fix request from an action endpoint", async () => {

@@ -21,6 +21,8 @@ export function getFixRequestUrl(plan: RepairPlan, env: LoopCiEnv): string {
 
 export function renderPlainTextRepairPlan(plan: RepairPlan, env: LoopCiEnv) {
   const actor = plan.event.triggeringActor ?? plan.event.actor ?? "unknown";
+  const owner = plan.ownership?.owner ?? actor;
+  const ownerSource = plan.ownership?.source ?? "actor";
 
   return [
     `LoopCI found a ${plan.classification.kind} failure.`,
@@ -28,6 +30,8 @@ export function renderPlainTextRepairPlan(plan: RepairPlan, env: LoopCiEnv) {
     `Repository: ${plan.event.repository}`,
     `Branch: ${plan.event.branch}`,
     `Workflow: ${plan.event.workflow}`,
+    `Owner: ${owner}`,
+    `Owner source: ${ownerSource}`,
     `Triggered by: ${actor}`,
     `Risk: ${plan.classification.risk}`,
     `Confidence: ${Math.round(plan.classification.confidence * 100)}%`,
@@ -44,9 +48,9 @@ export function renderPlainTextRepairPlan(plan: RepairPlan, env: LoopCiEnv) {
 }
 
 export function renderHtmlRepairPlan(plan: RepairPlan, env: LoopCiEnv) {
-  const actor = escapeHtml(
-    plan.event.triggeringActor ?? plan.event.actor ?? "unknown"
-  );
+  const actor = plan.event.triggeringActor ?? plan.event.actor ?? "unknown";
+  const owner = plan.ownership?.owner ?? actor;
+  const ownerSource = plan.ownership?.source ?? "actor";
   const planUrl = getPlanUrl(plan, env);
   const fixUrl = getFixRequestUrl(plan, env);
 
@@ -57,6 +61,8 @@ export function renderHtmlRepairPlan(plan: RepairPlan, env: LoopCiEnv) {
     row("Repository", plan.event.repository),
     row("Branch", plan.event.branch),
     row("Workflow", plan.event.workflow),
+    row("Owner", owner),
+    row("Owner source", ownerSource),
     row("Triggered by", actor),
     row("Risk", plan.classification.risk),
     row("Confidence", `${Math.round(plan.classification.confidence * 100)}%`),

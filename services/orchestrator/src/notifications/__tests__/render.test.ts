@@ -22,7 +22,14 @@ describe("repair-plan notification rendering", () => {
       "https://loopci.example.com/actions/plans/plan-1/request-fix"
     );
     expect(renderPlainTextRepairPlan(plan, env)).toContain("Fix this error");
+    expect(renderPlainTextRepairPlan(plan, env)).toContain(
+      "Owner: platform-team"
+    );
+    expect(renderPlainTextRepairPlan(plan, env)).toContain(
+      "Owner source: codeowners"
+    );
     expect(renderHtmlRepairPlan(plan, env)).toContain("Fix this error");
+    expect(renderHtmlRepairPlan(plan, env)).toContain("platform-team");
   });
 
   it("falls back to the GitHub run URL when no public URL is configured", () => {

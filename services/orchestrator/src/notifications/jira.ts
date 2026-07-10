@@ -1,5 +1,6 @@
 import type { LoopCiEnv } from "@loopci/config";
 import type { RepairPlan } from "@loopci/contracts";
+import { createOutboundAbortSignal } from "./outbound-timeout";
 import { getFixRequestUrl, getPlanUrl } from "./render";
 
 export interface JiraIssueResult {
@@ -17,6 +18,7 @@ export async function createJiraRepairPlanIssue(
   const baseUrl = env.LOOPCI_JIRA_BASE_URL.replace(/\/$/, "");
   const response = await fetch(`${baseUrl}/rest/api/3/issue`, {
     method: "POST",
+    signal: createOutboundAbortSignal(env),
     headers: {
       accept: "application/json",
       authorization: `Basic ${Buffer.from(

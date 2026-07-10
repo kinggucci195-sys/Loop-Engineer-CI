@@ -1,5 +1,12 @@
 import type { CiFailureEvent, FailureClassification } from "@loopci/contracts";
-import { createFallbackOwnershipResolver } from "../ownership-resolver";
+import { mkdtemp, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import {
+  createCodeownersOwnershipResolver,
+  createFallbackOwnershipResolver,
+  parseCodeowners
+} from "../ownership-resolver";
 
 const classification: FailureClassification = {
   kind: "lint",
@@ -68,6 +75,118 @@ describe("createFallbackOwnershipResolver", () => {
       )
     ).resolves.toEqual({
       source: "unknown"
+    });
+  });
+});
+
+describe("createCodeownersOwnershipResolver", () => {
+  it("parses CODEOWNERS rules without comments or empty lines", () => {
+    expect(
+      parseCodeowners(`
+# Platform ownership
+/services/orchestrator/ @platform
+apps/web/*.tsx @frontend @design
+`)
+    ).toEqual([
+      {
+        pattern: "/services/orchestrator/",
+        owners: ["platform"]
+      },
+      {
+        pattern: "apps/web/*.tsx",
+        owners: ["frontend", "design"]
+      }
+    ]);
+  });
+
+  it("prefers the last matching CODEOWNERS rule for likely failed files", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "loopci-codeowners-"));
+    const codeownersPath = join(directory, "CODEOWNERS");
+    await writeFile(
+      codeownersPath,
+      `
+* @everyone
+/services/orchestrator/ @platform
+services/orchestrator/src/server.ts @runtime
+`
+    );
+
+    const resolver = createCodeownersOwnershipResolver({
+      codeownersPath,
+      fallback: createFallbackOwnershipResolver()
+    });
+
+    await expect(
+      resolver.resolve(
+        event,
+        {
+          ...classification,
+          likelyFiles: ["services/orchestrator/src/server.ts"]
+        }
+      )
+    ).resolves.toEqual({
+      owner: "runtime",
+      source: "codeowners"
+    });
+  });
+
+  it("matches nested CODEOWNERS wildcards and strips inline comments", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "loopci-codeowners-"));
+    const codeownersPath = join(directory, "CODEOWNERS");
+    await writeFile(
+      codeownersPath,
+      `
+*.ts @typescript # all TypeScript files
+apps/**/route.ts @app-router
+apps/web/src/app/** @web-platform
+`
+    );
+
+    const resolver = createCodeownersOwnershipResolver({
+      codeownersPath,
+      fallback: createFallbackOwnershipResolver()
+    });
+
+    await expect(
+      resolver.resolve(
+        event,
+        {
+          ...classification,
+          likelyFiles: ["apps/web/src/app/actions/request-fix/route.ts"]
+        }
+      )
+    ).resolves.toEqual({
+      owner: "web-platform",
+      source: "codeowners"
+    });
+
+    await expect(
+      resolver.resolve(
+        event,
+        {
+          ...classification,
+          likelyFiles: ["packages/contracts/src/index.ts"]
+        }
+      )
+    ).resolves.toEqual({
+      owner: "typescript",
+      source: "codeowners"
+    });
+  });
+
+  it("falls back when CODEOWNERS does not match likely files", async () => {
+    const directory = await mkdtemp(join(tmpdir(), "loopci-codeowners-"));
+    const codeownersPath = join(directory, "CODEOWNERS");
+    await writeFile(codeownersPath, "/apps/web/ @frontend");
+
+    const resolver = createCodeownersOwnershipResolver({
+      codeownersPath,
+      fallback: createFallbackOwnershipResolver()
+    });
+
+    await expect(resolver.resolve(event, classification)).resolves.toEqual({
+      owner: "trigger-user",
+      source: "triggering-actor"
     });
   });
 });

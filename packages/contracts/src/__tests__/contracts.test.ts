@@ -60,6 +60,10 @@ describe("LoopCI contracts", () => {
 
     const plan = repairPlanSchema.parse({
       id: "plan-1",
+      ownership: {
+        owner: "platform-team",
+        source: "codeowners"
+      },
       event,
       classification: {
         kind: "unit-test",
@@ -81,6 +85,7 @@ describe("LoopCI contracts", () => {
     });
 
     expect(plan.evidenceRequired).toContain("npm test output");
+    expect(plan.ownership?.source).toBe("codeowners");
   });
 
   it("validates an evidence bundle", () => {

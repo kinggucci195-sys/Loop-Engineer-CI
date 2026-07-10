@@ -1,6 +1,7 @@
 import type {
   CiFailureEvent,
   FailureClassification,
+  OwnershipSnapshot,
   RepairPlan
 } from "@loopci/contracts";
 
@@ -14,7 +15,8 @@ function slugify(value: string): string {
 
 export function createRepairPlan(
   event: CiFailureEvent,
-  classification: FailureClassification
+  classification: FailureClassification,
+  ownership?: OwnershipSnapshot
 ): RepairPlan {
   const safeSlug = slugify(
     `${classification.kind}-${event.failedJob}-${event.runId}`
@@ -26,6 +28,7 @@ export function createRepairPlan(
     id: `plan-${event.runId}-${Date.now()}`,
     event,
     classification,
+    ...(ownership ? { ownership } : {}),
     status: humanRequired ? "blocked" : "queued",
     branchName: `loopci/${safeSlug}`,
     goal: buildGoal(classification),
@@ -48,6 +51,22 @@ function buildGoal(classification: FailureClassification): string {
 
   if (classification.kind === "typecheck") {
     return "Make TypeScript checks pass with explicit types and no weakening of strictness.";
+  }
+
+  if (classification.kind === "dependency") {
+    return "Restore dependency installation or resolution without widening package risk.";
+  }
+
+  if (classification.kind === "environment") {
+    return "Identify the missing runner, secret, or environment assumption before changing application code.";
+  }
+
+  if (
+    classification.kind === "unit-test" ||
+    classification.kind === "integration-test" ||
+    classification.kind === "e2e-test"
+  ) {
+    return "Reproduce the failed test signal, isolate whether it is product behavior or test instability, and propose the smallest safe repair.";
   }
 
   if (classification.kind === "flaky-or-noisy") {

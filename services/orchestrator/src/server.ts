@@ -1,7 +1,9 @@
 import Fastify from "fastify";
-import type { FastifyReply } from "fastify";
+import type { FastifyReply, FastifyRequest } from "fastify";
 import fastifyRawBody from "fastify-raw-body";
+import { timingSafeEqual } from "node:crypto";
 import { resolve } from "node:path";
+import { performance } from "node:perf_hooks";
 import { ciFailureEventSchema } from "@loopci/contracts";
 import type {
   CiFailureEvent,
@@ -35,12 +37,19 @@ import {
   createNotificationDispatcher,
   type NotificationDispatcher
 } from "./notifications/dispatcher";
+import { getNotificationIntegrationStatus } from "./notifications/notification-status";
 import {
-  createFallbackOwnershipResolver,
+  createOwnershipResolver,
+  type OwnershipResolution,
   type OwnershipResolver
 } from "./ownership/ownership-resolver";
 import { verifyGitHubWebhookSignature } from "./security/github-signature";
 import type { PlanStore } from "./state/plan-store";
+import {
+  createDeliveryIdFromPayload,
+  createJsonlWebhookDeliveryStore,
+  type WebhookDeliveryStore
+} from "./webhooks/delivery-store";
 import { createCiFailureEventFromGitHubWebhook } from "./webhooks/github";
 
 export interface ServerDependencies {
@@ -51,6 +60,7 @@ export interface ServerDependencies {
   notificationDispatcher?: NotificationDispatcher;
   memoryStore?: MemoryStore;
   ownershipResolver?: OwnershipResolver;
+  webhookDeliveryStore?: WebhookDeliveryStore;
 }
 
 export function buildServer(dependencies: ServerDependencies) {
@@ -69,7 +79,22 @@ export function buildServer(dependencies: ServerDependencies) {
       recordsPath: resolve(dependencies.env.STATE_DIR, "memory.jsonl")
     });
   const ownershipResolver =
-    dependencies.ownershipResolver ?? createFallbackOwnershipResolver();
+    dependencies.ownershipResolver ??
+    createOwnershipResolver({
+      codeownersPath: dependencies.env.LOOPCI_CODEOWNERS_PATH
+    });
+  const webhookDeliveryStore =
+    dependencies.webhookDeliveryStore ??
+    createJsonlWebhookDeliveryStore({
+      deliveriesPath: resolve(
+        dependencies.env.STATE_DIR,
+        "webhook-deliveries.jsonl"
+      ),
+      deadLetterPath: resolve(
+        dependencies.env.STATE_DIR,
+        "webhook-dead-letter.jsonl"
+      )
+    });
 
   server.register(fastifyRawBody, {
     field: "rawBody",
@@ -108,11 +133,64 @@ export function buildServer(dependencies: ServerDependencies) {
       }
     });
 
-    server.get("/plans", async () => ({
-      plans: await dependencies.planStore.list()
-    }));
+    server.get("/plans", async (request, reply) => {
+      if (!authorizeInternalRequest(request, reply)) {
+        return reply;
+      }
 
-    server.get("/memory", async () => {
+      return {
+      plans: await dependencies.planStore.list()
+      };
+    });
+
+    server.get("/integrations/status", async (request, reply) => {
+      if (!authorizeInternalRequest(request, reply)) {
+        return reply;
+      }
+
+      return getNotificationIntegrationStatus(dependencies.env);
+    });
+
+    server.get("/operations/metrics", async (request, reply) => {
+      if (!authorizeInternalRequest(request, reply)) {
+        return reply;
+      }
+
+      const [plans, memoryRecords, webhookDeliveries] = await Promise.all([
+        dependencies.planStore.list(),
+        memoryStore.listRecords(),
+        webhookDeliveryStore.summarize()
+      ]);
+
+      return {
+        service: "loopci-orchestrator",
+        generatedAt: new Date().toISOString(),
+        sloTargets: {
+          webhookSuccessRate: ">= 99%",
+          processingLatencyP95Ms: "<= 2000",
+          deadLetterRate: "<= 0.3%"
+        },
+        webhooks: webhookDeliveries,
+        plans: {
+          total: plans.length,
+          open: plans.filter((plan) => plan.status !== "closed").length,
+          blocked: plans.filter((plan) => plan.status === "blocked").length,
+          queued: plans.filter((plan) => plan.status === "queued").length
+        },
+        memory: {
+          records: memoryRecords.length,
+          recurring: memoryRecords.filter(
+            (record) => record.occurrenceCount >= 3
+          ).length
+        }
+      };
+    });
+
+    server.get("/memory", async (request, reply) => {
+      if (!authorizeInternalRequest(request, reply)) {
+        return reply;
+      }
+
       const records = await memoryStore.listRecords();
       const recordsWithRecognition = await Promise.all(
         records.map(async (record) => {
@@ -131,6 +209,10 @@ export function buildServer(dependencies: ServerDependencies) {
     });
 
     server.get("/memory/:id", async (request, reply) => {
+      if (!authorizeInternalRequest(request, reply)) {
+        return reply;
+      }
+
       const { id } = request.params as { id: string };
       const record = await memoryStore.getRecord(id);
 
@@ -153,6 +235,10 @@ export function buildServer(dependencies: ServerDependencies) {
     });
 
     server.get("/plans/:planId", async (request, reply) => {
+      if (!authorizeInternalRequest(request, reply)) {
+        return reply;
+      }
+
       const { planId } = request.params as { planId: string };
       const plan = await findPlan(planId);
 
@@ -241,6 +327,13 @@ export function buildServer(dependencies: ServerDependencies) {
     );
 
     server.post("/events/github-actions/failure", async (request, reply) => {
+      if (!allowUnsignedFailureEndpoint(request)) {
+        return reply.code(404).send({
+          accepted: false,
+          reason: "unsigned-event-endpoint-disabled"
+        });
+      }
+
       const event = ciFailureEventSchema.parse({
         ...(request.body as Record<string, unknown>),
         receivedAt: new Date().toISOString()
@@ -253,6 +346,12 @@ export function buildServer(dependencies: ServerDependencies) {
       "/webhooks/github",
       { config: { rawBody: true } },
       async (request, reply) => {
+        const webhookStart = performance.now();
+        const deliveryId = createDeliveryIdFromPayload({
+          deliveryId: request.headers["x-github-delivery"],
+          rawBody: request.rawBody
+        });
+        const eventName = headerValue(request.headers["x-github-event"]);
         const signatureValid = verifyGitHubWebhookSignature(
           request.rawBody,
           request.headers["x-hub-signature-256"],
@@ -266,28 +365,64 @@ export function buildServer(dependencies: ServerDependencies) {
           });
         }
 
-        const event = createCiFailureEventFromGitHubWebhook(
-          request.headers["x-github-event"],
-          request.body
-        );
+        const delivery = await webhookDeliveryStore.begin({
+          sourceDeliveryId: deliveryId,
+          ...(eventName ? { eventName } : {})
+        });
 
-        if (!event) {
+        if (delivery.duplicate) {
           return reply.code(202).send({
             accepted: false,
-            reason: "ignored-github-event"
+            reason: "duplicate-github-delivery",
+            deliveryId
           });
         }
 
-        return acceptFailureEvent(event, reply);
+        try {
+          const event = createCiFailureEventFromGitHubWebhook(
+            request.headers["x-github-event"],
+            request.body
+          );
+
+          if (!event) {
+            await webhookDeliveryStore.markIgnored(deliveryId, {
+              reason: "ignored-github-event",
+              latencyMs: durationSince(webhookStart)
+            });
+
+            return reply.code(202).send({
+              accepted: false,
+              reason: "ignored-github-event",
+              deliveryId
+            });
+          }
+
+          return acceptFailureEvent(event, reply, async () => {
+            await webhookDeliveryStore.markProcessed(deliveryId, {
+              latencyMs: durationSince(webhookStart)
+            });
+          });
+        } catch (error) {
+          await webhookDeliveryStore.markFailed(deliveryId, {
+            reason: error instanceof Error ? error.message : "unknown-error",
+            latencyMs: durationSince(webhookStart)
+          });
+          throw error;
+        }
       }
     );
   });
 
   async function acceptFailureEvent(
     event: CiFailureEvent,
-    reply: FastifyReply
+    reply: FastifyReply,
+    beforeSend?: () => Promise<void>
   ) {
+    const timingsMs: Record<string, number> = {};
+    const totalStart = performance.now();
+    const policyStart = performance.now();
     const policy = await policyProvider.getPolicy(event.repository);
+    timingsMs.policy = durationSince(policyStart);
 
     if (!policy.enabled) {
       return reply.code(202).send({
@@ -313,6 +448,7 @@ export function buildServer(dependencies: ServerDependencies) {
       }),
       policy
     );
+    const classificationStart = performance.now();
     const initialClassification =
       await dependencies.classifier.classify(policyEvent);
     const classification = enforceRepositoryPolicy(
@@ -320,12 +456,20 @@ export function buildServer(dependencies: ServerDependencies) {
       initialClassification,
       policy
     );
-    let plan = createRepairPlan(policyEvent, classification);
+    timingsMs.classification = durationSince(classificationStart);
+    const ownership = await ownershipResolver.resolve(
+      policyEvent,
+      classification
+    );
+    let plan = createRepairPlan(policyEvent, classification, ownership);
+    const memoryStart = performance.now();
     const memoryResult = await recordEngineeringMemory(
       policyEvent,
       classification,
-      plan
+      plan,
+      ownership
     );
+    timingsMs.memory = durationSince(memoryStart);
     const recognition = memoryResult?.recognition ?? null;
 
     if (memoryResult) {
@@ -335,8 +479,13 @@ export function buildServer(dependencies: ServerDependencies) {
       };
     }
 
+    const planStoreStart = performance.now();
     await dependencies.planStore.append(plan);
+    timingsMs.planStore = durationSince(planStoreStart);
+    const notificationsStart = performance.now();
     await notificationDispatcher.notifyRepairPlan(plan);
+    timingsMs.notifications = durationSince(notificationsStart);
+    timingsMs.total = durationSince(totalStart);
 
     logger.info(
       {
@@ -344,10 +493,14 @@ export function buildServer(dependencies: ServerDependencies) {
         repository: policyEvent.repository,
         kind: classification.kind,
         risk: classification.risk,
-        recognition
+        ownership,
+        recognition,
+        timingsMs
       },
       "Created repair plan"
     );
+
+    await beforeSend?.();
 
     return reply.code(202).send({
       accepted: true,
@@ -357,14 +510,16 @@ export function buildServer(dependencies: ServerDependencies) {
         autoCommentOnPr: policy.autoCommentOnPr,
         humanReviewRequired: classification.requiresHuman
       },
-      recognition
+      recognition,
+      timingsMs
     });
   }
 
   async function recordEngineeringMemory(
     event: CiFailureEvent,
     classification: FailureClassification,
-    plan: RepairPlan
+    plan: RepairPlan,
+    ownership: OwnershipResolution
   ): Promise<{
     memoryRecordId: string;
     recognition: EngineeringRecognitionSummary;
@@ -374,7 +529,6 @@ export function buildServer(dependencies: ServerDependencies) {
     }
 
     const fingerprint = createFailureFingerprint(event, classification);
-    const ownership = await ownershipResolver.resolve(event, classification);
     const failureObservedEvent = createFailureObservedEvent(
       plan,
       fingerprint,
@@ -425,6 +579,63 @@ export function buildServer(dependencies: ServerDependencies) {
   }
 
   return server;
+
+  function authorizeInternalRequest(
+    request: FastifyRequest,
+    reply: FastifyReply
+  ): boolean {
+    if (!dependencies.env.LOOPCI_API_TOKEN) {
+      return true;
+    }
+
+    if (hasValidApiToken(request.headers.authorization)) {
+      return true;
+    }
+
+    reply.code(401).send({
+      ok: false,
+      reason: "unauthorized"
+    });
+    return false;
+  }
+
+  function allowUnsignedFailureEndpoint(request: FastifyRequest): boolean {
+    return (
+      dependencies.env.NODE_ENV !== "production" ||
+      dependencies.env.LOOPCI_ALLOW_UNSIGNED_EVENTS ||
+      hasValidApiToken(request.headers.authorization)
+    );
+  }
+
+  function hasValidApiToken(authorization: unknown): boolean {
+    const expected = dependencies.env.LOOPCI_API_TOKEN;
+
+    if (!expected || typeof authorization !== "string") {
+      return false;
+    }
+
+    const prefix = "Bearer ";
+    if (!authorization.startsWith(prefix)) {
+      return false;
+    }
+
+    const provided = authorization.slice(prefix.length);
+    const expectedBuffer = Buffer.from(expected, "utf8");
+    const providedBuffer = Buffer.from(provided, "utf8");
+
+    return (
+      expectedBuffer.length === providedBuffer.length &&
+      timingSafeEqual(expectedBuffer, providedBuffer)
+    );
+  }
+}
+
+function durationSince(start: number): number {
+  return Math.round((performance.now() - start) * 100) / 100;
+}
+
+function headerValue(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
 }
 
 function renderActionPage(input: { title: string; body: string }) {

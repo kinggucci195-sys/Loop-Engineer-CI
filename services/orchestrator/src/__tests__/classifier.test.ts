@@ -51,6 +51,40 @@ describe("heuristic failure classifier", () => {
     expect(classification.requiresHuman).toBe(true);
   });
 
+  it.each([
+    [
+      "flaky-or-noisy",
+      "npm test",
+      "Test timed out after 5000 ms and passed on retry."
+    ],
+    [
+      "dependency",
+      "npm ci",
+      "npm ERR! ERESOLVE unable to resolve dependency tree"
+    ],
+    [
+      "environment",
+      "setup node",
+      "Missing env DATABASE_URL in CI environment"
+    ],
+    [
+      "integration-test",
+      "integration test",
+      "Postgres database connection ECONNREFUSED during integration test"
+    ],
+    ["e2e-test", "playwright test", "Playwright browser trace captured"]
+  ])("classifies %s taxonomy signals", async (kind, failedStep, logExcerpt) => {
+    const classification = await createHeuristicClassifier().classify({
+      ...baseEvent,
+      failedStep,
+      logExcerpt
+    });
+
+    expect(classification.kind).toBe(kind);
+    expect(classification.risk).toBe("medium");
+    expect(classification.requiresHuman).toBe(true);
+  });
+
   it("selects the heuristic provider by default", () => {
     const classifier = createFailureClassifier(loadEnv({ NODE_ENV: "test" }));
 

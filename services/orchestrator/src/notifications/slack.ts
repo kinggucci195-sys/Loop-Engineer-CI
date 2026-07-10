@@ -1,5 +1,6 @@
 import type { RepairPlan } from "@loopci/contracts";
 import type { LoopCiEnv } from "@loopci/config";
+import { createOutboundAbortSignal } from "./outbound-timeout";
 import { getFixRequestUrl, getPlanUrl } from "./render";
 
 export async function sendSlackRepairPlanNotification(
@@ -8,12 +9,15 @@ export async function sendSlackRepairPlanNotification(
   env: LoopCiEnv
 ) {
   const actor = plan.event.triggeringActor ?? plan.event.actor ?? "unknown";
+  const owner = plan.ownership?.owner ?? actor;
+  const ownerSource = plan.ownership?.source ?? "actor";
   const confidence = `${Math.round(plan.classification.confidence * 100)}%`;
   const response = await fetch(webhookUrl, {
     method: "POST",
     headers: {
       "content-type": "application/json"
     },
+    signal: createOutboundAbortSignal(env),
     body: JSON.stringify({
       text: `LoopCI found a ${plan.classification.kind} failure in ${plan.event.repository}`,
       blocks: [
@@ -37,6 +41,8 @@ export async function sendSlackRepairPlanNotification(
           fields: [
             markdownField("Branch", plan.event.branch),
             markdownField("Workflow", plan.event.workflow),
+            markdownField("Owner", owner),
+            markdownField("Owner source", ownerSource),
             markdownField("Triggered by", actor),
             markdownField("Failure", plan.classification.kind),
             markdownField("Risk", plan.classification.risk),

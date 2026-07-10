@@ -17,6 +17,8 @@
     "build:services": "npm run build --workspace @loopci/orchestrator && npm run build --workspace @loopci/worker",
     "build:web": "npm run build --workspace @loopci/web",
     "dev": "npm run dev --workspace @loopci/orchestrator",
+    "dev:orchestrator:env": "npm run dev:env --workspace @loopci/orchestrator",
+    "dev:worker:env": "npm run dev:env --workspace @loopci/worker",
     "lint": "eslint .",
     "test": "jest --coverage",
     "test:ci": "jest --ci --coverage --reporters=default --reporters=jest-junit",

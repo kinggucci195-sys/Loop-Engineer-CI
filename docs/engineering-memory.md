@@ -141,14 +141,16 @@ Future fingerprint types can represent deployments, incidents, pull requests, re
 
 ### Ownership
 
-Ownership is resolved through an `OwnershipResolver` interface. v1 uses a fallback resolver:
+Ownership is resolved through an `OwnershipResolver` interface. v1 can read a CODEOWNERS-style file through `LOOPCI_CODEOWNERS_PATH`, using the likely failed files from classification and the last matching rule.
+
+If CODEOWNERS is unavailable or no rule matches, LoopCI falls back to:
 
 1. triggering actor
 2. actor
 3. commit author email
 4. unknown
 
-Future resolvers can add CODEOWNERS, git blame, team ownership, service catalogs, or manual overrides without changing memory events or projection logic.
+Future resolvers can add git blame, team ownership, service catalogs, or manual overrides without changing memory events or projection logic.
 
 ### RecognitionEngine
 

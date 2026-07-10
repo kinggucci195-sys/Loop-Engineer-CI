@@ -1,6 +1,7 @@
 import nodemailer from "nodemailer";
 import type { RepairPlan } from "@loopci/contracts";
 import type { LoopCiEnv } from "@loopci/config";
+import { getOutboundTimeoutMs } from "./outbound-timeout";
 import { renderHtmlRepairPlan, renderPlainTextRepairPlan } from "./render";
 
 export async function sendEmailRepairPlanNotification(
@@ -18,6 +19,8 @@ export async function sendEmailRepairPlanNotification(
     host: env.LOOPCI_SMTP_HOST,
     port: env.LOOPCI_SMTP_PORT,
     secure: env.LOOPCI_SMTP_SECURE,
+    connectionTimeout: getOutboundTimeoutMs(env),
+    socketTimeout: getOutboundTimeoutMs(env),
     auth:
       env.LOOPCI_SMTP_USER && env.LOOPCI_SMTP_PASSWORD
         ? {
